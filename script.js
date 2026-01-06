@@ -37,97 +37,115 @@ const indicator = document.querySelector('.nav-indicator');
 const views = document.querySelectorAll('.view');
 
 /**
- * Draggable Navigation Logic
+ * Optimized Draggable Navigation Logic
  */
-let isDragging = false;
-let startX = 0;
-let initialIndicatorX = 0;
+let navState = {
+    isDragging: false,
+    startX: 0,
+    currentX: 0,
+    initialX: 0,
+    rAF: null
+};
 
-function moveIndicator(el) {
-    if (!el || !indicator) return;
+function moveIndicatorToTab(tabElement) {
+    if (!tabElement || !indicator) return;
     const navBar = document.querySelector('.glass-nav');
     if (!navBar) return;
 
-    const rect = el.getBoundingClientRect();
     const navRect = navBar.getBoundingClientRect();
-    const x = rect.left - navRect.left;
+    const tabRect = tabElement.getBoundingClientRect();
 
-    indicator.style.transform = `translateX(${x}px)`;
-    indicator.setAttribute('data-current-x', x);
+    // Relative X position
+    const targetX = tabRect.left - navRect.left;
+
+    indicator.style.transform = `translate(${targetX}px, -50%)`;
+
+    // Store state
+    navState.currentX = targetX;
+    indicator.setAttribute('data-target-x', targetX);
 }
 
-// Update position on resize/init
-const updateNavOnResize = () => {
-    const activeItem = document.querySelector('.nav-item.active');
-    if (activeItem) moveIndicator(activeItem);
+// Init & Resize
+const initNav = () => {
+    const active = document.querySelector('.nav-item.active');
+    if (active) {
+        indicator.classList.add('interactive'); // Enable touch
+        moveIndicatorToTab(active);
+    }
 };
-setTimeout(updateNavOnResize, 100);
-window.addEventListener('resize', updateNavOnResize);
+setTimeout(initNav, 200);
+window.addEventListener('resize', initNav);
 
-// Drag Initiation
+// Drag Events
 if (indicator) {
+    const navBar = document.querySelector('.glass-nav');
+
     indicator.addEventListener('pointerdown', (e) => {
-        isDragging = true;
-        startX = e.clientX;
-        initialIndicatorX = parseFloat(indicator.getAttribute('data-current-x')) || 0;
+        navState.isDragging = true;
+        navState.startX = e.clientX;
+        // Logic fix: initialX should be current CSS transform X
+        const transform = window.getComputedStyle(indicator).transform;
+        const matrix = new DOMMatrix(transform);
+        navState.initialX = matrix.m41;
+
         indicator.classList.add('dragging');
         indicator.setPointerCapture(e.pointerId);
+
+        if (navState.rAF) cancelAnimationFrame(navState.rAF);
     });
 
     indicator.addEventListener('pointermove', (e) => {
-        if (!isDragging) return;
+        if (!navState.isDragging) return;
+        e.preventDefault();
 
-        const deltaX = e.clientX - startX;
-        let newX = initialIndicatorX + deltaX;
+        const delta = e.clientX - navState.startX;
+        let newX = navState.initialX + delta;
 
-        const navBar = document.querySelector('.glass-nav');
-        if (!navBar) return;
+        // Bounds
+        const max = navBar.offsetWidth - indicator.offsetWidth - 10;
+        newX = Math.max(0, Math.min(newX, max)); // Bounds check simplified
 
-        const maxScroll = navBar.offsetWidth - indicator.offsetWidth - 24;
-        newX = Math.max(12, Math.min(newX, maxScroll));
-
-        indicator.style.transform = `translateX(${newX}px)`;
-
-        const closest = findClosestTab(newX);
-        if (closest) {
-            navItems.forEach(i => i.style.opacity = '0.5');
-            closest.style.opacity = '1';
-        }
+        // Use rAF for smooth visual update
+        if (navState.rAF) cancelAnimationFrame(navState.rAF);
+        navState.rAF = requestAnimationFrame(() => {
+            indicator.style.transform = `translate(${newX}px, -50%)`;
+        });
     });
 
     indicator.addEventListener('pointerup', (e) => {
-        if (!isDragging) return;
-        isDragging = false;
+        if (!navState.isDragging) return;
+        navState.isDragging = false;
         indicator.classList.remove('dragging');
 
-        const transform = indicator.style.transform;
-        const currentX = parseFloat(transform.replace('translateX(', '').replace('px)', '')) || 0;
-        const closestTarget = findClosestTab(currentX);
+        // Snap to closest
+        // Calculate final position from current visual state
+        const transform = window.getComputedStyle(indicator).transform;
+        const matrix = new DOMMatrix(transform);
+        const finalX = matrix.m41;
 
-        if (closestTarget) {
-            closestTarget.click();
+        const closestTab = findClosestTab(finalX);
+        if (closestTab) {
+            closestTab.click(); // Trigger click logic
         } else {
-            const activeItem = document.querySelector('.nav-item.active');
-            if (activeItem) moveIndicator(activeItem);
+            // Revert
+            const active = document.querySelector('.nav-item.active');
+            if (active) moveIndicatorToTab(active);
         }
-
-        navItems.forEach(i => i.style.opacity = '');
     });
 }
 
 function findClosestTab(x) {
     let closest = null;
-    let minDistance = Infinity;
+    let minDiff = Infinity;
     const navBar = document.querySelector('.glass-nav');
-    if (!navBar) return null;
     const navRect = navBar.getBoundingClientRect();
 
     navItems.forEach(item => {
-        const itemRect = item.getBoundingClientRect();
-        const itemX = itemRect.left - navRect.left;
-        const distance = Math.abs(itemX - x);
-        if (distance < minDistance) {
-            minDistance = distance;
+        const iRect = item.getBoundingClientRect();
+        const iX = iRect.left - navRect.left;
+        const diff = Math.abs(iX - x);
+        if (diff < minDiff) {
+            minDiff = diff;
             closest = item;
         }
     });
@@ -137,25 +155,32 @@ function findClosestTab(x) {
 navItems.forEach(item => {
     item.addEventListener('click', () => {
         const target = item.getAttribute('data-tab');
-        const currentActive = document.querySelector('.nav-item.active');
-
-        if (currentActive === item && document.querySelector('.view.active').id === target) return;
 
         navItems.forEach(i => i.classList.remove('active'));
         item.classList.add('active');
-        moveIndicator(item);
+
+        // Use the new movement logic
+        moveIndicatorToTab(item);
 
         views.forEach(v => {
-            v.classList.remove('active');
+            // Simple logic: remove active, add active after delay for effect
             if (v.id === target) {
-                setTimeout(() => {
-                    v.classList.add('active');
-                    if (v.classList.contains('scrollable')) v.scrollTop = 0;
-                }, 50);
+                // Hide others
+                views.forEach(other => {
+                    if (other.id !== target) other.classList.remove('active');
+                });
+
+                // Show this one
+                if (!v.classList.contains('active')) {
+                    setTimeout(() => {
+                        v.classList.add('active');
+                        if (v.classList.contains('scrollable')) v.scrollTop = 0;
+                    }, 10);
+                }
             }
         });
 
-        if (window.navigator.vibrate) window.navigator.vibrate(10);
+        if (window.navigator.vibrate) window.navigator.vibrate(5);
     });
 });
 
