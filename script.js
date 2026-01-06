@@ -173,14 +173,8 @@ function moveIndicatorToTab(tabElement) {
 
     // 2. Adjust for Indicator Width (since transform is usually top-left based, but here we center)
     // Actually, our CSS uses translate(X, -50%) where -50% is Y centering. 
-    // We calculate left X based on the current/target WIDTH of the indicator.
-
-    let targetWidth = 65; // Default Pill
-    if (tabElement.classList.contains('plus-tab')) {
-        targetWidth = 55; // Circle
-    }
-
-    const targetLeftX = targetCenterX - (targetWidth / 2);
+    // Let's assume X is left edge.
+    const targetLeftX = targetCenterX - (indicator.offsetWidth / 2);
 
     // 3. Special Handling for PLUS TAB (The Circle)
     if (tabElement.classList.contains('plus-tab')) {
@@ -998,6 +992,75 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
+ * DATA SYNC MANAGER (The "Middle File" Logic)
+ */
+const SyncManager = {
+    // This simulates the "Middle File" endpoint. 
+    // In a real hosting environment, this would be 'chat-data.json' or an API endpoint.
+    // Since browsers cannot write to disk directly, we prepare the structure here.
+    SHARED_FILE: 'kingdom_shared_data.json',
+    STORAGE_KEY: 'kingdom_chat_live_v2', // New key for data freshness
+
+    init() {
+        // Clear old history logic if needed (Manual Reset)
+    },
+
+    getData() {
+        // 1. Try to fetch from "Middle File" (Server/Network)
+        // return fetch(this.SHARED_FILE).then(r => r.json()).catch(() => this.getLocal());
+
+        // 2. Fallback to Local (Current Device)
+        return this.getLocal();
+    },
+
+    getLocal() {
+        return JSON.parse(localStorage.getItem(this.STORAGE_KEY) || "[]");
+    },
+
+    saveData(data) {
+        // 1. Save Local (Immediate UI update)
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+
+        // 2. Push to "Middle File" (Network)
+        this.pushToNetwork(data);
+    },
+
+    pushToNetwork(data) {
+        // Placeholder for actual file write/API call
+        // console.log("Syncing to middle file:", data.length);
+    },
+
+    // Utilities for Manual File Sync
+    exportToFile() {
+        const data = this.getLocal();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'kingdom_chat_shared.json';
+        a.click();
+    },
+
+    importFromFile(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    this.saveData(data);
+                    resolve(data);
+                } catch (err) {
+                    reject(err);
+                }
+            };
+            reader.readAsText(file);
+        });
+    }
+};
+
+SyncManager.init();
+
+/**
  * PRIVATE CHAT LOGIC
  */
 const chatInput = document.getElementById('chat-input');
@@ -1005,7 +1068,8 @@ const chatSendBtn = document.getElementById('chat-send-btn');
 const chatHistoryList = document.getElementById('chat-history');
 const chatSound = document.getElementById('chat-sent-sound');
 
-let chatHistory = JSON.parse(localStorage.getItem('kingdom_chat_history_v2') || "[]");
+// Renamed for clarity - now loaded via SyncManager
+let chatHistory = SyncManager.getLocal();
 
 function renderChat() {
     if (!chatHistoryList) return;
@@ -1028,14 +1092,11 @@ function renderChat() {
             lastDate = msgDate;
         }
 
+        // Logic: Me (Left), Them (Right)
         const isMine = msg.sender === currentUser;
-
-        // User Request: Me on LEFT, Partner on RIGHT
-        // We will map 'mine' class to Left styling and 'theirs' to Right styling in CSS
-        const bubble = document.createElement('div');
-        // We add specific classes for clarity: 'msg-left' (Me) and 'msg-right' (Them)
-        // to avoid confusion with previous 'mine/theirs' generic content
         const alignClass = isMine ? 'msg-left' : 'msg-right';
+
+        const bubble = document.createElement('div');
         bubble.className = `message-bubble ${alignClass}`;
 
         const time = msgDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -1081,8 +1142,11 @@ function sendChatContent(content, type) {
         timestamp: Date.now()
     };
 
+    // Update Local Instance
     chatHistory.push(newMessage);
-    localStorage.setItem('kingdom_chat_history_v2', JSON.stringify(chatHistory));
+
+    // Save via SyncManager (Middle File Logic)
+    SyncManager.saveData(chatHistory);
 
     renderChat();
 
@@ -1100,41 +1164,25 @@ function sendChatContent(content, type) {
 const gifBtn = document.getElementById('chat-gif-btn');
 const gifPicker = document.getElementById('chat-gif-picker');
 
-// Ensure sendGif is globally accessible for HTML onclick events
-window.sendGif = sendGif;
-
-function toggleGifPicker(e) {
-    // Prevent event bubbling if triggered by click
-    if (e && e.stopPropagation) e.stopPropagation();
-
+function toggleGifPicker(show) {
     if (!gifPicker) return;
-
-    // Check computed style if inline style is missing
-    const currentStyle = window.getComputedStyle(gifPicker).display;
-    const isHidden = currentStyle === 'none';
-
-    gifPicker.style.display = isHidden ? 'block' : 'none';
+    if (typeof show === 'boolean') {
+        gifPicker.style.display = show ? 'block' : 'none';
+    } else {
+        gifPicker.style.display = gifPicker.style.display === 'none' ? 'block' : 'none';
+    }
 }
 
-// Robust Listener Attachment
 if (gifBtn) {
     gifBtn.addEventListener('click', toggleGifPicker);
-    console.log("GIF Button Listener Attached"); // Debug
-} else {
-    // Retry in case of loading race condition
-    setTimeout(() => {
-        const btn = document.getElementById('chat-gif-btn');
-        if (btn) btn.addEventListener('click', toggleGifPicker);
-    }, 1000);
 }
 
 // Close picker if clicking outside
 document.addEventListener('click', (e) => {
-    if (gifPicker && gifPicker.style.display === 'block') {
-        // If click is NOT inside picker AND NOT the toggle button
-        if (!gifPicker.contains(e.target) && e.target !== gifBtn && !gifBtn.contains(e.target)) {
-            gifPicker.style.display = 'none';
-        }
+    if (gifPicker && gifPicker.style.display === 'block' &&
+        !gifPicker.contains(e.target) &&
+        e.target !== gifBtn) {
+        toggleGifPicker(false);
     }
 });
 
@@ -1202,8 +1250,8 @@ function checkTypingIndicator() {
 renderChat();
 
 window.addEventListener('storage', (e) => {
-    if (e.key === 'kingdom_chat_history_v2') {
-        chatHistory = JSON.parse(e.newValue || "[]");
+    if (e.key === SyncManager.STORAGE_KEY) {
+        chatHistory = SyncManager.getLocal();
         renderChat();
     }
     if (e.key === 'kingdom_typing_status') {
@@ -1221,490 +1269,3 @@ if (chatTabBtn) {
     });
 }
 
-
-
-/**
- * STORIES & CAMERA LOGIC - INSTAGRAM STYLE V2
- */
-
-let cameraStream = null;
-let currentFilter = 'none';
-
-// -- Editor State --
-let activeTextElement = null;
-let isDraggingText = false;
-let currentFont = 'classic';
-let currentColor = '#ffffff';
-
-// -- Elements --
-const cameraInterface = document.getElementById('camera-interface');
-const storyEditor = document.getElementById('story-editor');
-const videoElement = document.getElementById('camera-feed');
-const canvasElement = document.getElementById('camera-canvas');
-const capturedImage = document.getElementById('captured-image');
-const filterBtns = document.querySelectorAll('.filter-btn');
-const captureBtn = document.getElementById('capture-btn');
-
-// New Editor Elements
-const textLayer = document.getElementById('text-layer');
-const textControls = document.getElementById('text-controls');
-const toggleTextBtn = document.getElementById('toggle-text-mode');
-const closeEditorBtn = document.getElementById('close-editor');
-const storyCaptionInput = document.getElementById('story-caption'); // Bottom input
-const fontBtns = document.querySelectorAll('.font-btn');
-const colorDots = document.querySelectorAll('.color-dot');
-const sendStoryBtn = document.getElementById('send-story-btn');
-
-// 1. Camera Access
-async function startCamera() {
-    if (cameraStream) return;
-    try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-            audio: false
-        });
-        if (videoElement) {
-            videoElement.srcObject = cameraStream;
-            videoElement.onloadedmetadata = () => videoElement.play();
-        }
-    } catch (err) {
-        console.error("Camera Error:", err);
-    }
-}
-
-function stopCamera() {
-    if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
-        cameraStream = null;
-    }
-}
-
-// 2. Tab Observer
-const createTabObserver = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-        if (mutation.target.id === 'create') {
-            if (mutation.target.classList.contains('active')) {
-                startCamera();
-            } else {
-                stopCamera();
-            }
-        }
-    });
-});
-const createSection = document.getElementById('create');
-if (createSection) createTabObserver.observe(createSection, { attributes: true, attributeFilter: ['class'] });
-
-// 3. Filters
-if (filterBtns) {
-    filterBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            filterBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentFilter = btn.getAttribute('data-filter');
-            const filterClass = `filter-${currentFilter}`;
-            if (videoElement) {
-                videoElement.className = '';
-                if (currentFilter !== 'none') videoElement.classList.add(filterClass);
-            }
-            if (capturedImage) {
-                capturedImage.className = 'preview-img';
-                if (currentFilter !== 'none') capturedImage.classList.add(filterClass);
-            }
-        });
-    });
-}
-
-// 4. Capture
-if (captureBtn) {
-    captureBtn.addEventListener('click', () => {
-        if (!videoElement || !canvasElement) return;
-        const width = videoElement.videoWidth;
-        const height = videoElement.videoHeight;
-        canvasElement.width = width;
-        canvasElement.height = height;
-        const ctx = canvasElement.getContext('2d');
-
-        ctx.translate(width, 0);
-        ctx.scale(-1, 1);
-        ctx.drawImage(videoElement, 0, 0, width, height); // Raw capture
-
-        capturedImage.src = canvasElement.toDataURL('image/jpeg', 0.9);
-
-        // Reset Editor State
-        textLayer.innerHTML = '';
-        if (storyCaptionInput) storyCaptionInput.value = '';
-
-        cameraInterface.style.display = 'none';
-        storyEditor.style.display = 'flex';
-    });
-}
-
-// 5. Editor Logic - Text & Overlay
-
-// 5.a Toggle Text Mode
-if (toggleTextBtn) {
-    toggleTextBtn.addEventListener('click', () => {
-        // Create a new draggable text element center screen
-        const textSpan = document.createElement('div');
-        textSpan.contentEditable = true;
-        textSpan.className = `drag-text-item font-${currentFont}`;
-        textSpan.style.color = currentColor;
-        textSpan.innerText = "Type here...";
-        textSpan.style.left = '50%';
-        textSpan.style.top = '50%';
-
-        textLayer.appendChild(textSpan);
-
-        // Focus and Select
-        textSpan.focus();
-        document.execCommand('selectAll', false, null);
-
-        // Show controls
-        if (textControls) textControls.style.display = 'flex';
-        activeTextElement = textSpan;
-
-        // Bind Dragging
-        enableDrag(textSpan);
-
-        // Bind Focus events to show/hide controls
-        textSpan.addEventListener('focus', () => {
-            activeTextElement = textSpan;
-            if (textControls) textControls.style.display = 'flex';
-        });
-        textSpan.addEventListener('blur', () => {
-            // delay hiding to allow clicking controls
-            setTimeout(() => {
-                if (document.activeElement !== textSpan && !textControls.contains(document.activeElement)) {
-                    if (textControls) textControls.style.display = 'none';
-                }
-            }, 200);
-        });
-    });
-}
-
-// 5.b Font Switching
-if (fontBtns) {
-    fontBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            fontBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentFont = btn.getAttribute('data-font');
-
-            if (activeTextElement) {
-                // Remove old font classes
-                activeTextElement.classList.remove('font-classic', 'font-modern', 'font-neon', 'font-hand');
-                activeTextElement.classList.add(`font-${currentFont}`);
-                activeTextElement.focus();
-            }
-        });
-    });
-}
-
-// 5.c Color Switching
-if (colorDots) {
-    colorDots.forEach(dot => {
-        dot.addEventListener('click', () => {
-            colorDots.forEach(d => d.classList.remove('active'));
-            dot.classList.add('active');
-            currentColor = dot.getAttribute('data-color');
-
-            if (activeTextElement) {
-                activeTextElement.style.color = currentColor;
-                if (currentFont === 'neon') activeTextElement.style.color = currentColor; // Neon logic handles text-shadow in CSS
-                activeTextElement.focus();
-            }
-        });
-    });
-}
-
-// 5.d Draggable Logic
-function enableDrag(el) {
-    let isDown = false;
-    let startX, startY, initialLeft, initialTop;
-
-    const start = (e) => {
-        if (e.target !== el) return;
-        isDown = true;
-        activeTextElement = el; // Set active on touch
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-        startX = clientX;
-        startY = clientY;
-
-        // Get current percentages or pixels
-        const rect = el.getBoundingClientRect();
-        const parentRect = textLayer.getBoundingClientRect();
-
-        // We work with center positions to match the CSS 'translate(-50%, -50%)'
-        // Current Center X relative to parent
-        initialLeft = el.offsetLeft;
-        initialTop = el.offsetTop;
-    };
-
-    const move = (e) => {
-        if (!isDown) return;
-        e.preventDefault();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-        const dx = clientX - startX;
-        const dy = clientY - startY;
-
-        el.style.left = `${initialLeft + dx}px`;
-        el.style.top = `${initialTop + dy}px`;
-    };
-
-    const end = () => {
-        isDown = false;
-    };
-
-    el.addEventListener('mousedown', start);
-    el.addEventListener('touchstart', start);
-
-    window.addEventListener('mousemove', move);
-    window.addEventListener('touchmove', move, { passive: false });
-
-    window.addEventListener('mouseup', end);
-    window.addEventListener('touchend', end);
-}
-
-// 6. Close / Retake
-if (closeEditorBtn) {
-    closeEditorBtn.addEventListener('click', () => {
-        storyEditor.style.display = 'none';
-        cameraInterface.style.display = 'flex';
-    });
-}
-
-// 7. Share Logic - Burn Text to Image
-if (sendStoryBtn) {
-    sendStoryBtn.addEventListener('click', () => {
-        const currentUser = localStorage.getItem('kingdom_current_user') || 'Aviya';
-
-        // Composite Image Generation
-        // We need to draw the textLayer ON TOP of the image in the canvas
-        const ctx = canvasElement.getContext('2d');
-        // Canvas is already holding the raw photo.
-        // We generally need to redraw the photo because we might have lost it? 
-        // No, canvasElement still has it unless resizing cleared it.
-        // Safer: Draw the `capturedImage` back to canvas first, then draw text.
-
-        const img = new Image();
-        img.src = capturedImage.src;
-        img.onload = () => {
-            canvasElement.width = img.width;
-            canvasElement.height = img.height;
-
-            // 1. Draw Filters? 
-            // CSS Filters on <img> don't transfer to Canvas automatically.
-            // We must simulate them or just use CSS in viewer. 
-            // For MVP: We burn the TEXT, but keep filter as metadata or CSS.
-            // BUT user wants "Just like instagram".
-            // Let's rely on the Viewer applying the filter class.
-            // We ONLY burn text here.
-
-            ctx.drawImage(img, 0, 0);
-
-            // 2. Burn Text
-            // We need to map screen coordinates to canvas coordinates.
-            const previewRect = document.getElementById('editor-preview-container').getBoundingClientRect();
-            const scaleX = canvasElement.width / previewRect.width;
-            const scaleY = canvasElement.height / previewRect.height;
-
-            const textNodes = textLayer.children;
-            Array.from(textNodes).forEach(node => {
-                const nodeRect = node.getBoundingClientRect();
-
-                // Calculate position relative to the image container
-                const relativeLeft = (nodeRect.left - previewRect.left) * scaleX;
-                const relativeTop = (nodeRect.top - previewRect.top) * scaleY;
-                const nodeWidth = nodeRect.width * scaleX;
-
-                // Style
-                const computed = window.getComputedStyle(node);
-                const fontSize = parseFloat(computed.fontSize) * scaleX; // Approx scaling
-                const fontFamily = computed.fontFamily;
-                const color = computed.color;
-
-                ctx.font = `${computed.fontWeight} ${fontSize}px ${fontFamily}`;
-                ctx.fillStyle = color;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-
-                // Multiline handling not perfect here but "center" helps
-                // Position: nodeRect center
-                const centerX = relativeLeft + (nodeWidth / 2);
-                const centerY = relativeTop + (nodeRect.height * scaleY / 2);
-
-                ctx.save();
-                // Add Shadow if Neon
-                if (node.classList.contains('font-neon')) {
-                    ctx.shadowColor = color;
-                    ctx.shadowBlur = 15;
-                }
-
-                ctx.fillText(node.innerText, centerX, centerY);
-                ctx.restore();
-            });
-
-            // 3. Final Blob
-            const finalImage = canvasElement.toDataURL('image/jpeg', 0.85);
-
-            const newStory = {
-                id: Date.now(),
-                author: currentUser,
-                imageUrl: finalImage,
-                text: storyCaptionInput.value || "", // Bottom caption
-                filter: currentFilter,
-                timestamp: Date.now()
-            };
-
-            const stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
-            stories.push(newStory);
-            localStorage.setItem('kingdom_stories', JSON.stringify(stories));
-
-            // UI Reset
-            storyEditor.style.display = 'none';
-            cameraInterface.style.display = 'flex';
-            renderStatusRings();
-
-            const homeTab = document.querySelector('[data-tab="home"]');
-            if (homeTab) homeTab.click();
-        };
-    });
-}
-
-// 8. Renders & Viewer (Existing logic preserved/updated)
-function renderStatusRings() {
-    const stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
-    const now = Date.now();
-    const expiryTime = 24 * 60 * 60 * 1000;
-
-    ['David', 'Aviya'].forEach(user => {
-        const userStories = stories
-            .filter(s => s.author === user && (now - s.timestamp) < expiryTime)
-            .sort((a, b) => b.timestamp - a.timestamp);
-
-        const ring = document.getElementById(`ring-${user}`);
-        const avatar = document.getElementById(`avatar-${user}`);
-
-        if (userStories.length > 0) {
-            if (ring) ring.classList.add('has-story');
-            if (avatar) {
-                avatar.src = userStories[0].imageUrl;
-                avatar.style.display = 'block';
-            }
-        } else {
-            if (ring) ring.classList.remove('has-story');
-            if (avatar) avatar.style.display = 'none';
-        }
-    });
-}
-
-// Allow global access for onclick events in HTML
-window.viewStatus = (user) => {
-    const stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
-    const now = Date.now();
-    let validStories = stories
-        .filter(s => s.author === user && (now - s.timestamp) < 24 * 60 * 60 * 1000)
-        .sort((a, b) => a.timestamp - b.timestamp);
-
-    if (validStories.length === 0) return;
-
-    const viewer = document.getElementById('story-viewer');
-    const imgObj = document.getElementById('story-viewer-img');
-    const textObj = document.getElementById('story-viewer-text');
-    const progressFill = document.getElementById('story-progress-fill');
-    const deleteBtn = document.getElementById('delete-story-btn');
-    const currentUser = localStorage.getItem('kingdom_current_user') || 'Aviya';
-
-    if (!viewer) return;
-    viewer.classList.add('active');
-
-    let currentIndex = 0;
-    let autoAdvanceTimer = null;
-    const STORY_DURATION = 5000;
-
-    function playStory(index) {
-        if (index >= validStories.length) {
-            closeViewer();
-            return;
-        }
-
-        currentIndex = index;
-        const story = validStories[index];
-
-        // Ownership Check for Delete Button
-        if (deleteBtn) {
-            if (story.author === currentUser) {
-                deleteBtn.style.display = 'flex';
-                // Remove old listeners to avoid multiple bindings
-                const newBtn = deleteBtn.cloneNode(true);
-                deleteBtn.parentNode.replaceChild(newBtn, deleteBtn);
-
-                newBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    if (confirm("למחוק את הסטורי הזה?")) {
-                        deleteStory(story.id);
-                    }
-                };
-            } else {
-                deleteBtn.style.display = 'none';
-            }
-        }
-
-        imgObj.src = story.imageUrl;
-        textObj.textContent = story.text;
-        textObj.style.display = story.text ? 'block' : 'none';
-
-        // Apply Filter
-        imgObj.className = 'viewer-img';
-        if (story.filter && story.filter !== 'none') {
-            imgObj.classList.add(`filter-${story.filter}`);
-        }
-
-        // Animate Progress Bar
-        progressFill.style.transition = 'none';
-        progressFill.style.width = '0%';
-        void progressFill.offsetWidth;
-        progressFill.style.transition = `width ${STORY_DURATION}ms linear`;
-        progressFill.style.width = '100%';
-
-        // Setup next
-        clearTimeout(autoAdvanceTimer);
-        autoAdvanceTimer = setTimeout(() => playStory(index + 1), STORY_DURATION);
-    }
-
-    function deleteStory(storyId) {
-        let allStories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
-        allStories = allStories.filter(s => s.id !== storyId);
-        localStorage.setItem('kingdom_stories', JSON.stringify(allStories));
-
-        // Remove from current viewing list
-        validStories = validStories.filter(s => s.id !== storyId);
-
-        if (validStories.length === 0) {
-            closeViewer();
-        } else {
-            if (currentIndex >= validStories.length) currentIndex = validStories.length - 1;
-            playStory(currentIndex);
-        }
-        renderStatusRings();
-    }
-
-    playStory(0); // Start
-
-    window.closeViewer = () => {
-        clearTimeout(autoAdvanceTimer);
-        viewer.classList.remove('active');
-        imgObj.src = '';
-    };
-
-    const closeBtn = document.getElementById('close-viewer');
-    if (closeBtn) closeBtn.onclick = window.closeViewer;
-};
-
-// Start Status Listeners
-renderStatusRings();
-setInterval(renderStatusRings, 60000); // Auto refresh every minute
