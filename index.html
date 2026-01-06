@@ -63,8 +63,33 @@
                     <!-- Names (Modern Classic) -->
                     <div class="names-section">
                         <h1 class="boutique-names playfair-italic">David & Aviya</h1>
-                        <div id="personal-welcome" class="personal-welcome montserrat">Welcome back</div>
+                        <div id="personal-welcome" class="personal-welcome montserrat">Welcome back, <span
+                                id="name-placeholder"></span></div>
                         <div class="minimal-divider"></div>
+                    </div>
+
+                    <!-- Status Rings Section -->
+                    <div class="status-section-container">
+                        <div class="status-item" onclick="viewStatus('David')">
+                            <div class="status-ring-wrapper" id="ring-David">
+                                <div class="status-ring">
+                                    <span class="initials">D</span>
+                                    <img id="avatar-David" src="" class="status-avatar" style="display:none;"
+                                        onerror="this.style.display='none'">
+                                </div>
+                            </div>
+                            <span class="status-name">David</span>
+                        </div>
+                        <div class="status-item" onclick="viewStatus('Aviya')">
+                            <div class="status-ring-wrapper" id="ring-Aviya">
+                                <div class="status-ring">
+                                    <span class="initials">A</span>
+                                    <img id="avatar-Aviya" src="" class="status-avatar" style="display:none;"
+                                        onerror="this.style.display='none'">
+                                </div>
+                            </div>
+                            <span class="status-name">Aviya</span>
+                        </div>
                     </div>
 
                     <!-- Hourly Status/Mood Widget -->
@@ -92,10 +117,131 @@
             </div>
         </section>
         <section id="chat" class="view">
-            <div class="chat-placeholder">
-                <i class="fa-solid fa-comments"></i>
-                <h1 class="playfair-italic">Private Space</h1>
-                <p class="montserrat">Chat coming soon...</p>
+            <div class="chat-container">
+                <div id="chat-history" class="chat-history"></div>
+
+                <!-- GIF Picker -->
+                <div id="chat-gif-picker" class="gif-picker" style="display: none;">
+                    <div class="gif-grid">
+                        <!-- Original Selection -->
+                        <img src="https://media.giphy.com/media/3o7TKs6lJ0P09L4l8I/giphy.gif" class="gif-item"
+                            onclick="sendGif('https://media.giphy.com/media/3o7TKs6lJ0P09L4l8I/giphy.gif')">
+                        <img src="https://media.giphy.com/media/l4pTfx2qLszoacZRS/giphy.gif" class="gif-item"
+                            onclick="sendGif('https://media.giphy.com/media/l4pTfx2qLszoacZRS/giphy.gif')">
+                        <img src="https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif" class="gif-item"
+                            onclick="sendGif('https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif')">
+                        <img src="https://media.giphy.com/media/xT0GqFhyNd0MwjuCn6/giphy.gif" class="gif-item"
+                            onclick="sendGif('https://media.giphy.com/media/xT0GqFhyNd0MwjuCn6/giphy.gif')">
+                        <img src="https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif" class="gif-item"
+                            onclick="sendGif('https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif')">
+                        <img src="https://media.giphy.com/media/l0HlHFRbmaZtBRhXG/giphy.gif" class="gif-item"
+                            onclick="sendGif('https://media.giphy.com/media/l0HlHFRbmaZtBRhXG/giphy.gif')">
+
+                        <!-- New Love Additions -->
+                        <img src="https://media.giphy.com/media/l41IWw65XfW9I50I0/giphy.gif" class="gif-item"
+                            onclick="sendGif('https://media.giphy.com/media/l41IWw65XfW9I50I0/giphy.gif')">
+                        <img src="https://media.giphy.com/media/26FLdmIp6wJr91JAI/giphy.gif" class="gif-item"
+                            onclick="sendGif('https://media.giphy.com/media/26FLdmIp6wJr91JAI/giphy.gif')">
+                        <img src="https://media.giphy.com/media/l0K4kWJir91VEoa1W/giphy.gif" class="gif-item"
+                            onclick="sendGif('https://media.giphy.com/media/l0K4kWJir91VEoa1W/giphy.gif')">
+                        <img src="https://media.giphy.com/media/3o7qDEq2bMbcbPRQ2c/giphy.gif" class="gif-item"
+                            onclick="sendGif('https://media.giphy.com/media/3o7qDEq2bMbcbPRQ2c/giphy.gif')">
+                        <img src="https://media.giphy.com/media/l2R0eYcNq9rJUsVAA/giphy.gif" class="gif-item"
+                            onclick="sendGif('https://media.giphy.com/media/l2R0eYcNq9rJUsVAA/giphy.gif')">
+                        <img src="https://media.giphy.com/media/3oriO6q2XKSAQyJYwU/giphy.gif" class="gif-item"
+                            onclick="sendGif('https://media.giphy.com/media/3oriO6q2XKSAQyJYwU/giphy.gif')">
+                        <img src="https://media.giphy.com/media/Md43W2Q9mwNdO1ZFwM/giphy.gif" class="gif-item"
+                            onclick="sendGif('https://media.giphy.com/media/Md43W2Q9mwNdO1ZFwM/giphy.gif')">
+                        <img src="https://media.giphy.com/media/c76IJLufpNwS1We526/giphy.gif" class="gif-item"
+                            onclick="sendGif('https://media.giphy.com/media/c76IJLufpNwS1We526/giphy.gif')">
+                    </div>
+                </div>
+
+                <div class="chat-input-area glass-nav-resemblance">
+                    <button id="chat-gif-btn" title="Add GIF"><i class="fa-solid fa-icons"></i></button>
+                    <input type="text" id="chat-input" placeholder="Write a message..." autocomplete="off">
+                    <button id="chat-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+                <audio id="chat-sent-sound" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3"
+                    preload="auto"></audio>
+            </div>
+        </section>
+        <section id="create" class="view">
+            <!-- Camera Interface -->
+            <div id="camera-interface" class="camera-interface">
+                <video id="camera-feed" autoplay playsinline muted></video>
+                <canvas id="camera-canvas" style="display:none;"></canvas>
+
+                <div class="camera-overlay">
+                    <div class="camera-header">
+                        <h2 class="playfair-italic">New Story</h2>
+                    </div>
+
+                    <div class="camera-controls">
+                        <div class="filters-container">
+                            <button class="filter-btn active" data-filter="none">Normal</button>
+                            <button class="filter-btn" data-filter="vintage">Vintage</button>
+                            <button class="filter-btn" data-filter="noir">Noir</button>
+                            <button class="filter-btn" data-filter="warm">Warm</button>
+                        </div>
+
+                        <div class="capture-row">
+                            <button id="capture-btn" class="capture-ring">
+                                <div class="capture-inner"></div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Post-Capture Editor (Instagram Style) -->
+            <div id="story-editor" class="story-editor" style="display: none;">
+                <div class="editor-header-controls">
+                    <button class="icon-btn" id="close-editor"><i class="fa-solid fa-xmark"></i></button>
+                    <div class="editor-tools">
+                        <button class="icon-btn" id="toggle-text-mode"><i class="fa-solid fa-font"></i></button>
+                        <button class="icon-btn" id="toggle-draw-mode"><i class="fa-solid fa-pen"></i></button>
+                    </div>
+                </div>
+
+                <div class="editor-preview-container" id="editor-preview-container">
+                    <img id="captured-image" class="preview-img">
+
+                    <!-- Text Overlay Layer -->
+                    <div id="text-layer" class="text-layer">
+                        <!-- Draggable texts will be injected here -->
+                    </div>
+
+                    <!-- Filter Overlay (Sparkles/Grain) -->
+                    <div id="effect-overlay" class="effect-overlay"></div>
+                </div>
+
+                <!-- Text Editing Controls (Appears when typing) -->
+                <div id="text-controls" class="text-controls" style="display: none;">
+                    <div class="font-selector">
+                        <button class="font-btn font-classic active" data-font="classic">Classic</button>
+                        <button class="font-btn font-modern" data-font="modern">Modern</button>
+                        <button class="font-btn font-neon" data-font="neon">Neon</button>
+                        <button class="font-btn font-hand" data-font="hand">Hand</button>
+                    </div>
+                    <div class="color-slider">
+                        <button class="color-dot" style="background:#fff" data-color="#fff"></button>
+                        <button class="color-dot" style="background:#000" data-color="#000"></button>
+                        <button class="color-dot" style="background:#FF4E4E" data-color="#FF4E4E"></button>
+                        <button class="color-dot" style="background:#FFD700" data-color="#FFD700"></button>
+                        <button class="color-dot" style="background:#00FFFF" data-color="#00FFFF"></button>
+                        <button class="color-dot" style="background:#FF00FF" data-color="#FF00FF"></button>
+                    </div>
+                </div>
+
+                <div class="editor-actions">
+                    <div class="story-inputs">
+                        <input type="text" id="story-caption" placeholder="Add a caption..." class="glass-input">
+                    </div>
+                    <button id="send-story-btn" class="editor-btn primary">
+                        <span>Share</span> <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
             </div>
         </section>
         <section id="gallery" class="view scrollable">
@@ -257,6 +403,22 @@
         </section>
     </div>
 
+    <!-- Full Screen Story Viewer -->
+    <div id="story-viewer" class="story-viewer full-screen-modal">
+        <div class="story-progress-container">
+            <div class="story-progress-bar">
+                <div id="story-progress-fill" class="progress-fill"></div>
+            </div>
+        </div>
+        <div class="viewer-content">
+            <img id="story-viewer-img" class="viewer-img">
+            <p id="story-viewer-text" class="viewer-text playfair-italic"></p>
+        </div>
+        <button id="close-viewer" class="close-viewer-btn"><i class="fa-solid fa-xmark"></i></button>
+        <button id="delete-story-btn" class="delete-story-btn" style="display:none;"><i
+                class="fa-solid fa-trash"></i></button>
+    </div>
+
     <!-- Audio Elements -->
     <audio id="spin-sound" src="https://assets.mixkit.co/active_storage/sfx/2009/2009-preview.mp3"
         preload="auto"></audio>
@@ -275,6 +437,9 @@
         </button>
         <button class="nav-item active" data-tab="home">
             <i class="fa-solid fa-house"></i>
+        </button>
+        <button class="nav-item plus-tab" data-tab="create">
+            <i class="fa-solid fa-plus"></i>
         </button>
         <button class="nav-item" data-tab="gallery">
             <i class="fa-solid fa-images"></i>
