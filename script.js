@@ -48,11 +48,13 @@ const db = firebase.firestore();
 const SyncManager = {
     CHAT_COLLECTION: 'kingdom_chats',
     STORY_COLLECTION: 'kingdom_stories',
+    MEMORIES_COLLECTION: 'kingdom_memories',
 
     init: function () {
         console.log("Starting Sync Services...");
         this.listenToChats();
         this.listenToStories();
+        this.listenToMemories();
     },
 
     // --- CHAT SYNC ---
@@ -117,6 +119,25 @@ const SyncManager = {
 
     deleteStory: function (storyId) {
         db.collection(this.STORY_COLLECTION).doc(storyId).delete();
+    },
+
+    // --- MEMORIES SYNC ---
+    listenToMemories: function () {
+        db.collection(this.MEMORIES_COLLECTION)
+            .orderBy('timestamp', 'desc')
+            .limit(20)
+            .onSnapshot((snapshot) => {
+                const fetchedMemories = [];
+                snapshot.forEach(doc => fetchedMemories.push({ id: doc.id, ...doc.data() }));
+
+                // Update Global Variable
+                memories = fetchedMemories;
+                renderMemories();
+            });
+    },
+
+    addMemory: function (memoryData) {
+        db.collection(this.MEMORIES_COLLECTION).add(memoryData);
     }
 };
 
@@ -531,23 +552,16 @@ setTimeout(generateAIGreeting, 1000);
 /**
  * Gallery & Memories Logic - PERSISTENCE & COMPRESSION
  */
-let memories = (typeof getInitialMemories === 'function') ? getInitialMemories() : (JSON.parse(localStorage.getItem('kingdom_memories')) || []);
-
-// Add Sample Data if empty
-// Initial data handled by memories-data.js or logic above
-if (!memories || memories.length === 0) {
-    // Fallback if needed
-    memories = [];
-}
+let memories = [];
+/* 
+Legacy loading removed. Memories are now synced via Firebase SyncManager. 
+*/
 
 let currentDraftImages = [];
 
 function syncStorage() {
-    try {
-        localStorage.setItem('kingdom_memories', JSON.stringify(memories));
-    } catch (e) {
-        console.error("Storage limit reached.");
-    }
+    // Deprecated - replaced by Firebase Sync
+    // console.log("Memory saved to cloud");
 }
 
 /**
@@ -654,29 +668,34 @@ if (confirmPostBtn) {
         setTimeout(() => {
             const currentUser = localStorage.getItem('kingdom_current_user') || 'Aviya';
             const storyCaptionInput = document.getElementById('story-caption'); // Assuming this exists for stories
-            const finalImage = currentDraftImages[0]; // Assuming only one image for story
-            const currentFilter = 'ai-filter-0'; // Placeholder for actual filter logic
-            const storyEditor = document.getElementById('story-editor'); // Assuming this exists
-            const cameraInterface = document.getElementById('camera-interface'); // Assuming this exists
+            const frameStyles = ['frame-polaroid', 'frame-modern-glass', 'frame-film-strip', 'frame-vintage-wood'];
+            const themeColors = ['#A7C7E7', '#FFD1DC', '#B0E0E6', '#F0E68C', '#DDA0DD', '#98FB98']; // Example colors
 
-            const newStory = {
-                author: currentUser,
-                imageUrl: finalImage,
-                text: storyCaptionInput.value || "", // Bottom caption
-                filter: currentFilter,
+            const newMemory = {
+                // id: Date.now(), // Firestore generates ID
+                images: currentDraftImages.map((img, idx) => ({
+                    src: img,
+                    frame: frameStyles[Math.floor(Math.random() * frameStyles.length)],
+                    filter: `ai-filter-${idx % 4}`
+                })),
+                text: galleryText.value,
+                themeColor: themeColors[Math.floor(Math.random() * themeColors.length)],
+                isCollapsed: false,
                 timestamp: Date.now()
             };
 
             // Use SyncManager
-            SyncManager.addStory(newStory);
+            SyncManager.addMemory(newMemory);
 
-            // UI Reset
-            storyEditor.style.display = 'none';
-            cameraInterface.style.display = 'flex';
-            // renderStatusRings(); // Will be triggered by listener
+            currentDraftImages = [];
+            if (galleryText) galleryText.value = '';
+            if (previewArea) previewArea.style.display = 'none';
+            if (textModal) textModal.style.display = 'none';
+            if (aiLoader) aiLoader.style.display = 'none';
 
-            const homeTab = document.querySelector('[data-tab="home"]');
-            if (homeTab) homeTab.click();
+            // renderMemories() is called by listener
+            const viewTab = document.querySelector('[data-gallery-tab="view"]');
+            if (viewTab) viewTab.click();
         }, 1500);
     });
 }
@@ -1088,72 +1107,12 @@ document.addEventListener('DOMContentLoaded', () => {
 /**
  * DATA SYNC MANAGER (The "Middle File" Logic)
  */
+/**
+ * DATA SYNC MANAGER (The "Middle File" Logic)
+ * REPLACED BY FIREBASE SYNC MANAGER AT TOP OF FILE
+ */
 /*
-const SyncManager = {
-    // This simulates the "Middle File" endpoint. 
-    // In a real hosting environment, this would be 'chat-data.json' or an API endpoint.
-    // Since browsers cannot write to disk directly, we prepare the structure here.
-    SHARED_FILE: 'kingdom_shared_data.json',
-    STORAGE_KEY: 'kingdom_chat_live_v2', // New key for data freshness
-
-    init() {
-        // Clear old history logic if needed (Manual Reset)
-    },
-
-    getData() {
-        // 1. Try to fetch from "Middle File" (Server/Network)
-        // return fetch(this.SHARED_FILE).then(r => r.json()).catch(() => this.getLocal());
-
-        // 2. Fallback to Local (Current Device)
-        return this.getLocal();
-    },
-
-    getLocal() {
-        return JSON.parse(localStorage.getItem(this.STORAGE_KEY) || "[]");
-    },
-
-    saveData(data) {
-        // 1. Save Local (Immediate UI update)
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
-
-        // 2. Push to "Middle File" (Network)
-        this.pushToNetwork(data);
-    },
-
-    pushToNetwork(data) {
-        // Placeholder for actual file write/API call
-        // console.log("Syncing to middle file:", data.length);
-    },
-
-    // Utilities for Manual File Sync
-    exportToFile() {
-        const data = this.getLocal();
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'kingdom_chat_shared.json';
-        a.click();
-    },
-
-    importFromFile(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    this.saveData(data);
-                    resolve(data);
-                } catch (err) {
-                    reject(err);
-                }
-            };
-            reader.readAsText(file);
-        });
-    }
-};
-
-SyncManager.init();
+const SyncManagerLegacy = { ... } // Removing conflict
 */
 
 function deleteStory(storyId) {
@@ -1366,10 +1325,7 @@ function checkTypingIndicator() {
 renderChat();
 
 window.addEventListener('storage', (e) => {
-    if (e.key === SyncManager.STORAGE_KEY) {
-        chatHistory = SyncManager.getLocal();
-        renderChat();
-    }
+    // Legacy support removed needed for firebase
     if (e.key === 'kingdom_typing_status') {
         checkTypingIndicator();
     }
