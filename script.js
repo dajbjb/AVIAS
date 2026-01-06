@@ -29,6 +29,99 @@ function createHeart() {
 // Generate hearts periodically
 setInterval(createHeart, 800);
 
+// --- FIREBASE CONFIGURATION & SYNC ---
+const firebaseConfig = {
+    apiKey: "AIzaSyB0X6__li6tO-bgDTDfO9AumgWMOSgEz38",
+    authDomain: "create-a-project-a1ad8.firebaseapp.com",
+    projectId: "create-a-project-a1ad8",
+    storageBucket: "create-a-project-a1ad8.firebasestorage.app",
+    messagingSenderId: "437547204222",
+    appId: "1:437547204222:web:bc3bb027d5f6f227c4e22f",
+    measurementId: "G-ZBDL793CWM"
+};
+
+// Initialize Firebase (Compat)
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// Sync Manager - Handles Realtime Data
+const SyncManager = {
+    CHAT_COLLECTION: 'kingdom_chats',
+    STORY_COLLECTION: 'kingdom_stories',
+
+    init: function () {
+        console.log("Starting Sync Services...");
+        this.listenToChats();
+        this.listenToStories();
+    },
+
+    // --- CHAT SYNC ---
+    listenToChats: function () {
+        db.collection(this.CHAT_COLLECTION)
+            .orderBy('timestamp', 'asc')
+            .limit(100)
+            .onSnapshot((snapshot) => {
+                const messages = [];
+                snapshot.forEach(doc => messages.push(doc.data()));
+
+                // Update Global Variable & Render
+                chatHistory = messages;
+                renderChat();
+                scrollToBottom(); // Auto scroll on new message
+            });
+    },
+
+    sendChat: function (msg) {
+        // Fire & Forget - Firestore handles sync
+        // Add status: 'sent' initially
+        msg.status = 'sent';
+        db.collection(this.CHAT_COLLECTION).add(msg);
+    },
+
+    markMessagesAsRead: function (otherUser) {
+        // Find all unread messages from OTHER user and mark read
+        const batch = db.batch();
+        db.collection(this.CHAT_COLLECTION)
+            .where('sender', '==', otherUser)
+            .where('status', '!=', 'read')
+            .get()
+            .then(snapshot => {
+                snapshot.forEach(doc => {
+                    const ref = db.collection(this.CHAT_COLLECTION).doc(doc.id);
+                    batch.update(ref, { status: 'read' });
+                });
+                return batch.commit();
+            })
+            .catch(e => console.log("Read receipt updated error", e));
+    },
+
+    // --- STORY SYNC ---
+    listenToStories: function () {
+        // cleanup old stories manually or via rules, here we just filter in UI
+        db.collection(this.STORY_COLLECTION)
+            .orderBy('timestamp', 'desc') // Newest first
+            .limit(50)
+            .onSnapshot((snapshot) => {
+                const stories = [];
+                snapshot.forEach(doc => stories.push({ id: doc.id, ...doc.data() }));
+
+                // Update Persistent Local for offline/fast load, but rely on listener
+                localStorage.setItem('kingdom_stories', JSON.stringify(stories));
+                renderStatusRings(); // Refresh UI
+            });
+    },
+
+    addStory: function (storyData) {
+        db.collection(this.STORY_COLLECTION).add(storyData);
+    },
+
+    deleteStory: function (storyId) {
+        db.collection(this.STORY_COLLECTION).doc(storyId).delete();
+    }
+};
+
+// Start Sync
+SyncManager.init();
 /**
  * Navigation Logic
  */
@@ -559,30 +652,31 @@ if (confirmPostBtn) {
         if (aiLoader) aiLoader.style.display = 'flex';
 
         setTimeout(() => {
-            const frameStyles = ['frame-classic-gold', 'frame-polaroid', 'frame-modern-glass', 'frame-minimal-rose'];
-            const themeColors = ['rgba(224, 191, 184, 0.4)', 'rgba(242, 210, 189, 0.4)', 'rgba(44, 62, 80, 0.4)', 'rgba(76, 161, 175, 0.4)'];
+            const currentUser = localStorage.getItem('kingdom_current_user') || 'Aviya';
+            const storyCaptionInput = document.getElementById('story-caption'); // Assuming this exists for stories
+            const finalImage = currentDraftImages[0]; // Assuming only one image for story
+            const currentFilter = 'ai-filter-0'; // Placeholder for actual filter logic
+            const storyEditor = document.getElementById('story-editor'); // Assuming this exists
+            const cameraInterface = document.getElementById('camera-interface'); // Assuming this exists
 
-            const newMemory = {
-                id: Date.now(),
-                images: currentDraftImages.map((img, idx) => ({
-                    src: img,
-                    frame: frameStyles[Math.floor(Math.random() * frameStyles.length)],
-                    filter: `ai-filter-${idx % 4}`
-                })),
-                text: galleryText.value,
-                themeColor: themeColors[Math.floor(Math.random() * themeColors.length)],
-                isCollapsed: false
+            const newStory = {
+                author: currentUser,
+                imageUrl: finalImage,
+                text: storyCaptionInput.value || "", // Bottom caption
+                filter: currentFilter,
+                timestamp: Date.now()
             };
-            memories.unshift(newMemory);
-            syncStorage();
-            currentDraftImages = [];
-            if (galleryText) galleryText.value = '';
-            if (previewArea) previewArea.style.display = 'none';
-            if (textModal) textModal.style.display = 'none';
-            if (aiLoader) aiLoader.style.display = 'none';
-            renderMemories();
-            const viewTab = document.querySelector('[data-gallery-tab="view"]');
-            if (viewTab) viewTab.click();
+
+            // Use SyncManager
+            SyncManager.addStory(newStory);
+
+            // UI Reset
+            storyEditor.style.display = 'none';
+            cameraInterface.style.display = 'flex';
+            // renderStatusRings(); // Will be triggered by listener
+
+            const homeTab = document.querySelector('[data-tab="home"]');
+            if (homeTab) homeTab.click();
         }, 1500);
     });
 }
@@ -994,6 +1088,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /**
  * DATA SYNC MANAGER (The "Middle File" Logic)
  */
+/*
 const SyncManager = {
     // This simulates the "Middle File" endpoint. 
     // In a real hosting environment, this would be 'chat-data.json' or an API endpoint.
@@ -1059,7 +1154,14 @@ const SyncManager = {
 };
 
 SyncManager.init();
+*/
 
+function deleteStory(storyId) {
+    if (confirm("למחוק את הסטורי הזה?")) {
+        SyncManager.deleteStory(storyId);
+        closeViewer(); // Close immediately, listener will update UI
+    }
+}
 /**
  * PRIVATE CHAT LOGIC
  */
@@ -1069,42 +1171,60 @@ const chatHistoryList = document.getElementById('chat-history');
 const chatSound = document.getElementById('chat-sent-sound');
 
 // Renamed for clarity - now loaded via SyncManager
-let chatHistory = SyncManager.getLocal();
+let chatHistory = []; // Will be populated by Firebase listener
 
 function renderChat() {
     if (!chatHistoryList) return;
     chatHistoryList.innerHTML = '';
 
     const currentUser = localStorage.getItem('kingdom_current_user') || 'Aviya';
+    const otherUser = currentUser === 'Aviya' ? 'David' : 'Aviya';
+
+    // Mark as read if we are viewing
+    const chatTabActive = document.querySelector('.nav-item.active[data-tab="chat"]');
+    if (chatTabActive) {
+        SyncManager.markMessagesAsRead(otherUser);
+    }
 
     let lastDate = null;
 
     chatHistory.forEach(msg => {
+        // Date Separator
         const msgDateObj = new Date(msg.timestamp);
-        const msgDate = msgDateObj.toLocaleDateString('en-GB');
-
+        const msgDate = msgDateObj.toLocaleDateString();
         if (msgDate !== lastDate) {
             const separator = document.createElement('div');
             separator.className = 'chat-date-separator';
-            const today = new Date().toLocaleDateString('en-GB');
+            const today = new Date().toLocaleDateString();
             separator.textContent = (msgDate === today) ? 'Today' : msgDate;
             chatHistoryList.appendChild(separator);
             lastDate = msgDate;
         }
 
-        // Logic: Me (Left), Them (Right)
         const isMine = msg.sender === currentUser;
         const alignClass = isMine ? 'msg-left' : 'msg-right';
-
         const bubble = document.createElement('div');
         bubble.className = `message-bubble ${alignClass}`;
 
         const time = msgDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+        // Ticks Logic
+        let tickHtml = '';
+        if (isMine) {
+            // Check mark logic: sent (v), read (vv blue)
+            const status = msg.status || 'sent';
+            const tickClass = status === 'read' ? 'ticks-read' : '';
+            const icon = status === 'read' ? '<i class="fa-solid fa-check-double"></i>' : (status === 'delivered' ? '<i class="fa-solid fa-check-double"></i>' : '<i class="fa-solid fa-check"></i>');
+            tickHtml = `<span class="msg-ticks ${tickClass}">${icon}</span>`;
+        }
+
         bubble.innerHTML = `
             <span class="message-sender">${msg.sender}</span>
             ${msg.type === 'gif' ? `<img src="${msg.text}" class="chat-gif">` : msg.text}
-            <span class="message-time">${time}</span>
+            <div class="msg-meta">
+                ${tickHtml}
+                <span class="message-time">${time}</span>
+            </div>
         `;
 
         chatHistoryList.appendChild(bubble);
@@ -1135,20 +1255,16 @@ function sendChatContent(content, type) {
     const currentUser = localStorage.getItem('kingdom_current_user') || 'Aviya';
 
     const newMessage = {
-        id: Date.now(),
         text: content,
         type: type, // 'text' or 'gif'
         sender: currentUser,
         timestamp: Date.now()
     };
 
-    // Update Local Instance
-    chatHistory.push(newMessage);
+    // Use SyncManager instead of local push
+    SyncManager.sendChat(newMessage);
 
-    // Save via SyncManager (Middle File Logic)
-    SyncManager.saveData(chatHistory);
-
-    renderChat();
+    chatInput.value = '';
 
     if (chatSound) {
         chatSound.volume = 0.5;
@@ -1266,6 +1382,10 @@ const chatTabBtn = document.querySelector('[data-tab="chat"]');
 if (chatTabBtn) {
     chatTabBtn.addEventListener('click', () => {
         setTimeout(scrollToBottom, 50);
+        // Mark read when entering chat
+        const currentUser = localStorage.getItem('kingdom_current_user') || 'Aviya';
+        const otherUser = currentUser === 'Aviya' ? 'David' : 'Aviya';
+        SyncManager.markMessagesAsRead(otherUser);
     });
 }
 
