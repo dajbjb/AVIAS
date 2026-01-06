@@ -235,10 +235,22 @@ body::before {
 }
 
 
-#timeline {
-    background: linear-gradient(45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-    background-size: 400% 400%;
-    animation: gradientShift 15s ease infinite;
+#chat {
+    background: radial-gradient(circle at top right, #0f172a 0%, #000 100%);
+}
+
+.chat-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    opacity: 0.6;
+}
+
+.chat-placeholder i {
+    font-size: 4rem;
+    color: var(--rose-gold);
+    animation: boutiquePulse 3s infinite;
 }
 
 @keyframes gradientShift {
@@ -387,6 +399,16 @@ body::before {
     animation: boutiqueFadeIn 3s ease forwards;
 }
 
+.personal-welcome {
+    font-size: 0.9rem;
+    color: var(--rose-gold);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-top: -10px;
+    opacity: 0;
+    transition: opacity 1s ease 1s;
+}
+
 @keyframes boutiqueFadeIn {
     from {
         opacity: 0;
@@ -407,6 +429,40 @@ body::before {
     background: var(--rose-gold);
     margin: 20px auto;
     opacity: 0.3;
+}
+
+.temp-logout-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #ff4e4e, #c0392b);
+    border: none;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    z-index: 10001;
+    /* Higher than everything */
+    box-shadow: 0 4px 15px rgba(255, 78, 78, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+}
+
+.temp-logout-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 78, 78, 0.6);
+}
+
+.temp-logout-btn:active {
+    transform: translateY(0);
 }
 
 .status-widget-mini {
