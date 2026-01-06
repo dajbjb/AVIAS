@@ -60,14 +60,25 @@ window.addEventListener('resize', () => {
 
 navItems.forEach(item => {
     item.addEventListener('click', () => {
+        if (item.classList.contains('active')) return;
+
         navItems.forEach(i => i.classList.remove('active'));
         item.classList.add('active');
         moveIndicator(item);
 
         const target = item.getAttribute('data-tab');
+
+        // Use a small delay to ensure the transitions feel distinct
         views.forEach(v => {
             v.classList.remove('active');
-            if (v.id === target) v.classList.add('active');
+            if (v.id === target) {
+                setTimeout(() => {
+                    v.classList.add('active');
+                    if (v.classList.contains('scrollable')) {
+                        v.scrollTop = 0;
+                    }
+                }, 50);
+            }
         });
     });
 });
