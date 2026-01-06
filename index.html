@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kingdom</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@200;300;400&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="login-ui.css">
+</head>
+
+<body>
+
+    <!-- Login & User Selection Screen -->
+    <div id="login-overlay">
+        <div id="user-selection">
+            <h1 class="login-title">ברוכים הבאים לממלכה</h1>
+            <div class="user-options">
+                <button class="user-btn" data-user="Aviya">
+                    <i class="fa-solid fa-crown"></i>
+                    אביה
+                </button>
+                <button class="user-btn" data-user="David">
+                    <i class="fa-solid fa-gem"></i>
+                    דוד
+                </button>
+            </div>
+        </div>
+
+        <div id="waiting-screen">
+            <div class="luxury-loader"></div>
+            <div class="waiting-msg">
+                מכין את המרחב שלך...
+                <span id="waiting-user-name" class="waiting-name">אביה</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Background Elements -->
+    <div id="love-background">
+        <!-- JS will inject floating hearts here -->
+    </div>
+
+    <!-- Main Content Sections -->
+    <div id="content">
+        <section id="home" class="view active scrollable">
+            <div class="boutique-hero">
+                <!-- Ambient Light Background -->
+                <div id="ambient-light" class="ambient-gradient day"></div>
+
+                <div class="hero-content">
+                    <!-- Date & Time (Thin & Elegant) -->
+                    <div class="boutique-clock">
+                        <div id="digital-date" class="montserrat">TUESDAY, JANUARY 6</div>
+                        <div id="digital-clock" class="montserrat">14:56</div>
+                    </div>
+
+                    <!-- Names (Modern Classic) -->
+                    <div class="names-section">
+                        <h1 class="boutique-names playfair-italic">David & Aviya</h1>
+                        <div class="minimal-divider"></div>
+                    </div>
+
+                    <!-- Hourly Status/Mood Widget -->
+                    <div id="status-widget" class="status-widget-mini montserrat">
+                        <i class="fa-solid fa-moon"></i>
+                        <span id="status-text">Sweet Dreams</span>
+                    </div>
+
+                    <!-- Subtle Greeting -->
+                    <div id="ai-greeting" class="boutique-greeting montserrat">
+                        Welcome to your sanctuary
+                    </div>
+
+                    <!-- AI Key Setup (Hidden by Default) -->
+                    <div id="api-setup" class="api-setup-container" style="display: none;">
+                        <input type="password" id="api-key-input" placeholder="Enter Gemini API Key...">
+                        <button id="save-api-key"><i class="fa-solid fa-check"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="home-scroll-sections">
+                <!-- Random Memories Highlights -->
+                <div id="home-highlights"></div>
+            </div>
+        </section>
+        <section id="timeline" class="view">
+            <h1 class="liquid-text">Timeline</h1>
+        </section>
+        <section id="gallery" class="view scrollable">
+            <div class="gallery-container">
+                <!-- Gallery Header Tabs -->
+                <div class="gallery-header">
+                    <div class="gallery-tabs">
+                        <div class="gallery-tab-indicator"></div>
+                        <button class="gallery-tab active" data-gallery-tab="view">צפייה</button>
+                        <button class="gallery-tab" data-gallery-tab="create">יצירה</button>
+                    </div>
+                </div>
+
+                <!-- Gallery Body -->
+                <div class="gallery-body">
+                    <div id="gallery-view" class="gallery-content active">
+                        <div id="memories-list" class="memories-container">
+                            <!-- Memories will be dynamically injected here -->
+                            <div class="gallery-placeholder">
+                                <i class="fa-solid fa-wand-sparkles"></i>
+                                <p>הזיכרונות שלכם יופיעו כאן</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="gallery-create" class="gallery-content">
+                        <div class="create-flow">
+                            <!-- Step 1: Upload Zone -->
+                            <div class="upload-zone" id="upload-zone">
+                                <input type="file" id="gallery-upload" multiple accept="image/*" hidden>
+                                <label for="gallery-upload" class="upload-label">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                                    <span>בחרו רגעים (עד 5 תמונות)</span>
+                                </label>
+                            </div>
+
+                            <!-- Step 2: Stacked Preview -->
+                            <div class="create-preview-area" id="create-preview-area" style="display: none;">
+                                <div class="preview-header">
+                                    <h3>הזיכרון שלכם</h3>
+                                    <p>גררו לשינוי סדר | לחצו להסרת תמונה</p>
+                                </div>
+                                <div class="images-reorder-list stacked-preview" id="reorder-list">
+                                    <!-- Draggable images injected here -->
+                                </div>
+                                <button class="post-button" id="save-images-btn">שמור ובחר מילים</button>
+                            </div>
+
+                            <!-- Step 3: Text Request Overlay -->
+                            <div id="text-modal" class="gallery-modal" style="display: none;">
+                                <div class="modal-content glass-card">
+                                    <h3>ספרו על הרגע הזה...</h3>
+                                    <div class="text-input-wrapper">
+                                        <textarea id="gallery-text" placeholder="הוסיפו כיתוב מרגש..."
+                                            maxlength="200"></textarea>
+                                        <div class="word-counter"><span id="char-count">0</span>/200</div>
+                                    </div>
+                                    <div class="modal-actions">
+                                        <button class="modal-btn cancel" id="cancel-post">ביטול</button>
+                                        <button class="modal-btn confirm" id="confirm-post">צור זיכרון</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section id="quality-time" class="view scrollable">
+            <div class="quality-container">
+                <!-- Mini Game Tabs -->
+                <div class="game-tabs-wrapper">
+                    <div class="game-tabs">
+                        <div class="game-tab-indicator"></div>
+                        <button class="game-tab active" data-game="wheel">
+                            <i class="fa-solid fa-dharmachakra"></i>
+                        </button>
+                        <button class="game-tab" data-game="game2">
+                            <i class="fa-solid fa-puzzle-piece"></i>
+                        </button>
+                        <button class="game-tab" data-game="game3">
+                            <i class="fa-solid fa-dice"></i>
+                        </button>
+                        <button class="game-tab" data-game="game4">
+                            <i class="fa-solid fa-trophy"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="game-wheel" class="game-view active">
+                    <header class="quality-header">
+                        <h1 class="playfair-italic">Moment of Choice</h1>
+                        <p class="montserrat">Customize and Let fate decide</p>
+                    </header>
+
+                    <!-- Customization Panel -->
+                    <div class="wheel-config glass-card">
+                        <h3 class="montserrat">Customize Options</h3>
+                        <div id="wheel-inputs" class="wheel-inputs">
+                            <div class="input-row">
+                                <input type="text" placeholder="Option 1" value="Movie Night">
+                                <button class="remove-input"><i class="fa-solid fa-times"></i></button>
+                            </div>
+                            <div class="input-row">
+                                <input type="text" placeholder="Option 2" value="Fancy Dinner">
+                                <button class="remove-input"><i class="fa-solid fa-times"></i></button>
+                            </div>
+                        </div>
+                        <button id="add-option" class="add-option-btn">
+                            <i class="fa-solid fa-plus"></i> Add Option
+                        </button>
+                    </div>
+
+                    <div class="wheel-wrapper">
+                        <div class="wheel-container">
+                            <div class="wheel-pointer">
+                                <i class="fa-solid fa-location-arrow"></i>
+                            </div>
+                            <div id="wheel" class="wheel"></div>
+                            <button id="spin-btn" class="spin-button">
+                                <span>SPIN</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="wheel-result" class="wheel-result-card glass-card" style="display: none;">
+                        <div class="result-glow"></div>
+                        <h2 class="playfair-italic" id="result-text">Something Special</h2>
+                        <p class="montserrat">Enjoy your time together!</p>
+                        <button class="close-result" id="close-result">Awesome!</button>
+                    </div>
+                </div>
+
+                <div id="game-game2" class="game-view">
+                    <div class="test-game glass-card">
+                        <h2 class="playfair-italic">Questions for Two</h2>
+                        <p class="montserrat" id="question-box">Click the button for a conversation starter</p>
+                        <button class="post-button" id="next-question">Random Question</button>
+                    </div>
+                </div>
+                <div id="game-game3" class="game-view">
+                    <div class="test-game glass-card">
+                        <h2 class="playfair-italic">Love Dice</h2>
+                        <div class="dice-container">
+                            <i id="dice-1" class="fa-solid fa-dice-one"></i>
+                            <i id="dice-2" class="fa-solid fa-dice-six"></i>
+                        </div>
+                        <button class="post-button" id="roll-dice">Roll the Dice</button>
+                    </div>
+                </div>
+                <div id="game-game4" class="game-view">
+                    <div class="test-game glass-card">
+                        <h2 class="playfair-italic">Boutique Memory</h2>
+                        <p class="montserrat">A simple tap counter for testing</p>
+                        <div class="counter-display" id="tap-count">0</div>
+                        <button class="post-button" id="tap-btn">Tap Together!</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Audio Elements -->
+    <audio id="spin-sound" src="https://assets.mixkit.co/active_storage/sfx/2009/2009-preview.mp3"
+        preload="auto"></audio>
+    <audio id="win-sound" src="https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3"
+        preload="auto"></audio>
+    <audio id="click-sound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"
+        preload="auto"></audio>
+    <audio id="dice-sound" src="https://assets.mixkit.co/active_storage/sfx/2045/2045-preview.mp3"
+        preload="auto"></audio>
+
+    <!-- Liquid Glass Navigation -->
+    <nav class="glass-nav">
+        <div class="nav-indicator"></div>
+        <button class="nav-item" data-tab="timeline">
+            <i class="fa-regular fa-calendar"></i>
+        </button>
+        <button class="nav-item active" data-tab="home">
+            <i class="fa-solid fa-house"></i>
+        </button>
+        <button class="nav-item" data-tab="gallery">
+            <i class="fa-solid fa-images"></i>
+        </button>
+        <button class="nav-item" data-tab="quality-time">
+            <i class="fa-solid fa-heart-circle-check"></i>
+        </button>
+    </nav>
+
+    <!-- AI Designing Loader Overlay -->
+    <div id="ai-loader" class="ai-loader">
+        <i class="fa-solid fa-wand-magic-sparkles ai-sparkle"></i>
+        <p>AI Designing Your Memory...</p>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="login-logic.js"></script>
+</body>
+
+</html>
