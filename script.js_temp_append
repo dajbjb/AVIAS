@@ -1,0 +1,293 @@
+
+/**
+ * STORIES & CAMERA LOGIC
+ * Implements the "Status/Story" feature with a custom camera.
+ */
+
+// State
+let cameraStream = null;
+let currentFilter = 'none';
+let capturedImageBlob = null; // or DataURL
+
+// Elements
+const cameraInterface = document.getElementById('camera-interface');
+const storyEditor = document.getElementById('story-editor');
+const videoElement = document.getElementById('camera-feed');
+const canvasElement = document.getElementById('camera-canvas');
+const capturedImage = document.getElementById('captured-image');
+const filterBtns = document.querySelectorAll('.filter-btn');
+const captureBtn = document.getElementById('capture-btn');
+const retakeBtn = document.getElementById('retake-btn');
+const sendStoryBtn = document.getElementById('send-story-btn');
+const storyTextInput = document.getElementById('story-text-input');
+
+// 1. Camera Control
+async function startCamera() {
+    if (cameraStream) return; // Already running
+
+    try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false
+        });
+        if (videoElement) {
+            videoElement.srcObject = cameraStream;
+            videoElement.play();
+        }
+    } catch (err) {
+        console.error("Camera access denied:", err);
+        alert("Camera access is needed to share moments.");
+    }
+}
+
+function stopCamera() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+}
+
+// 2. Tab Visibility Handling (Optimization)
+// extend the existing tab click listener logic or add a new observer
+const createTabObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        if (mutation.target.id === 'create') {
+            if (mutation.target.classList.contains('active')) {
+                startCamera();
+            } else {
+                stopCamera();
+            }
+        }
+    });
+});
+
+const createSection = document.getElementById('create');
+if (createSection) {
+    createTabObserver.observe(createSection, { attributes: true, attributeFilter: ['class'] });
+}
+
+// 3. Filter Logic
+if (filterBtns) {
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // UI Update
+            filterBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            // Apply Filter
+            currentFilter = btn.getAttribute('data-filter');
+            const filterClass = `filter-${currentFilter}`;
+            
+            // Remove old filters
+            videoElement.className = ''; 
+            capturedImage.className = 'preview-img';
+            
+            if (currentFilter !== 'none') {
+                videoElement.classList.add(filterClass);
+                capturedImage.classList.add(filterClass);
+            }
+        });
+    });
+}
+
+// 4. Capture Logic
+if (captureBtn) {
+    captureBtn.addEventListener('click', () => {
+        if (!videoElement || !canvasElement) return;
+
+        // Set canvas size to match video
+        const width = videoElement.videoWidth;
+        const height = videoElement.videoHeight;
+        canvasElement.width = width;
+        canvasElement.height = height;
+
+        const ctx = canvasElement.getContext('2d');
+        
+        // Horizontal flip for selfie consistency
+        ctx.translate(width, 0);
+        ctx.scale(-1, 1);
+        
+        ctx.drawImage(videoElement, 0, 0, width, height);
+        
+        // Get Data URL
+        const dataUrl = canvasElement.toDataURL('image/jpeg', 0.85);
+        capturedImage.src = dataUrl;
+        
+        // Switch views
+        cameraInterface.style.display = 'none';
+        storyEditor.style.display = 'flex';
+    });
+}
+
+// 5. Retake / Cancel
+if (retakeBtn) {
+    retakeBtn.addEventListener('click', () => {
+        storyEditor.style.display = 'none';
+        cameraInterface.style.display = 'flex';
+        storyTextInput.value = '';
+    });
+}
+
+// 6. Send / Save Logic
+if (sendStoryBtn) {
+    sendStoryBtn.addEventListener('click', () => {
+        const currentUser = localStorage.getItem('kingdom_current_user') || 'Aviya'; // Default fallback
+        
+        const newStory = {
+            id: Date.now(),
+            author: currentUser,
+            imageUrl: capturedImage.src,
+            text: storyTextInput.value || "",
+            filter: currentFilter,
+            timestamp: Date.now()
+        };
+
+        // Save to LocalStorage
+        const stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
+        stories.push(newStory);
+        
+        try {
+            localStorage.setItem('kingdom_stories', JSON.stringify(stories));
+        } catch (e) {
+            alert("Storage full! Please delete some old memories.");
+            return;
+        }
+
+        // Reset UI
+        storyEditor.style.display = 'none';
+        cameraInterface.style.display = 'flex';
+        storyTextInput.value = '';
+        
+        // Update Home Screen
+        renderStatusRings();
+        
+        // Navigate to Home
+        const homeTab = document.querySelector('[data-tab="home"]');
+        if (homeTab) homeTab.click();
+    });
+}
+
+/**
+ * HOME SCREEN STATUS INTEGRATION
+ */
+
+function renderStatusRings() {
+    const stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
+    const now = Date.now();
+    const expiryTime = 24 * 60 * 60 * 1000; // 24 hours
+
+    // Data for David and Aviya
+    const users = ['David', 'Aviya'];
+
+    users.forEach(user => {
+        // Find latest active story
+        const userStories = stories
+            .filter(s => s.author === user && (now - s.timestamp) < expiryTime)
+            .sort((a, b) => b.timestamp - a.timestamp);
+
+        const ring = document.getElementById(`ring-${user}`);
+        const avatar = document.getElementById(`avatar-${user}`);
+        
+        if (userStories.length > 0) {
+            // Has active story
+            if (ring) ring.classList.add('has-story');
+            if (avatar) {
+                // Show the latest story image as avatar or just keep it hidden if we want "ring only"
+                // The prompt says "Status Rings... Click to view". 
+                // Let's us the latest story image as the avatar for now, it looks cool.
+                avatar.src = userStories[0].imageUrl; 
+                avatar.style.display = 'block';
+                // Be sure to apply the filter to the avatar too if possible, or just raw
+                // Simplest is raw image for avatar
+            }
+        } else {
+            if (ring) ring.classList.remove('has-story');
+            if (avatar) avatar.style.display = 'none';
+        }
+    });
+
+    // Cleanup old stories occassionally
+    if (Math.random() < 0.1) {
+        const freshStories = stories.filter(s => (now - s.timestamp) < expiryTime);
+        localStorage.setItem('kingdom_stories', JSON.stringify(freshStories));
+    }
+}
+
+// Global View Status Function (called from HTML onclick)
+window.viewStatus = (user) => {
+    const stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
+    const now = Date.now();
+    const expiryTime = 24 * 60 * 60 * 1000;
+    
+    // Get valid stories for this user, oldest first (like insta)
+    const userStories = stories
+        .filter(s => s.author === user && (now - s.timestamp) < expiryTime)
+        .sort((a, b) => a.timestamp - b.timestamp);
+
+    if (userStories.length === 0) return; // No stories to show
+
+    // Open Viewer
+    const viewer = document.getElementById('story-viewer');
+    const imgObj = document.getElementById('story-viewer-img');
+    const textObj = document.getElementById('story-viewer-text');
+    const progressFill = document.getElementById('story-progress-fill');
+    
+    if (!viewer) return;
+    
+    viewer.classList.add('active');
+    
+    let currentIndex = 0;
+    let storyTimer = null;
+    const storyDuration = 5000; // 5 seconds per story
+
+    function showStory(index) {
+        if (index >= userStories.length) {
+            // Done
+            closeViewer();
+            return;
+        }
+
+        const story = userStories[index];
+        imgObj.src = story.imageUrl;
+        textObj.style.display = story.text ? 'block' : 'none';
+        textObj.textContent = story.text;
+        
+        // Apply filter class
+        imgObj.className = 'viewer-img'; // reset
+        if (story.filter && story.filter !== 'none') {
+            imgObj.classList.add(`filter-${story.filter}`);
+        }
+
+        // Animate Progress
+        progressFill.style.transition = 'none';
+        progressFill.style.width = '0%';
+        setTimeout(() => {
+            progressFill.style.transition = `width ${storyDuration}ms linear`;
+            progressFill.style.width = '100%';
+        }, 50);
+
+        // Timer
+        clearTimeout(storyTimer);
+        storyTimer = setTimeout(() => {
+            showStory(index + 1);
+        }, storyDuration);
+    }
+
+    // Start
+    showStory(0);
+
+    // Close logic
+    window.closeViewer = () => {
+        clearTimeout(storyTimer);
+        viewer.classList.remove('active');
+        imgObj.src = '';
+    };
+    
+    const closeBtn = document.getElementById('close-viewer');
+    if (closeBtn) closeBtn.onclick = window.closeViewer; // ensure binding
+};
+
+// Initial Render
+renderStatusRings();
+// Add auto-refresh
+setInterval(renderStatusRings, 60000); // Check every minute
