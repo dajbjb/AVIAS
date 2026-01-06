@@ -249,52 +249,13 @@ setTimeout(generateAIGreeting, 1000);
 /**
  * Gallery & Memories Logic - PERSISTENCE & COMPRESSION
  */
-let memories = JSON.parse(localStorage.getItem('kingdom_memories')) || [];
+let memories = (typeof getInitialMemories === 'function') ? getInitialMemories() : (JSON.parse(localStorage.getItem('kingdom_memories')) || []);
 
 // Add Sample Data if empty
-if (memories.length === 0) {
-    const samples = [
-        {
-            id: 1704540000001,
-            text: "ערב רומנטי בלתי נשכח מתחת לאור הנרות. הטעמים, המוזיקה והאווירה היו פשוט מושלמים.",
-            themeColor: 'rgba(224, 191, 184, 0.4)',
-            isCollapsed: false,
-            images: [
-                { src: "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=800&q=80", frame: 'frame-classic-gold', filter: 'ai-filter-0' },
-                { src: "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80", frame: 'frame-modern-glass', filter: 'ai-filter-1' }
-            ]
-        },
-        {
-            id: 1704540000002,
-            text: "השקיעה הכי יפה שראינו בשנה האחרונה. רגע של שקט מול עוצמתו של הים.",
-            themeColor: 'rgba(242, 210, 189, 0.4)',
-            isCollapsed: true,
-            images: [
-                { src: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80", frame: 'frame-polaroid', filter: 'ai-filter-2' }
-            ]
-        },
-        {
-            id: 1704540000003,
-            text: "זמן יצירה וריכוז. הממלכה הטכנולוגית שלי במיטבה.",
-            themeColor: 'rgba(44, 62, 80, 0.4)',
-            isCollapsed: true,
-            images: [
-                { src: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=800&q=80", frame: 'frame-minimal-rose', filter: 'ai-filter-0' },
-                { src: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80", frame: 'frame-modern-glass', filter: 'ai-filter-3' }
-            ]
-        },
-        {
-            id: 1704540000004,
-            text: "טיול בוקר ביער הקסום. האוויר נקי והנשימה עמוקה.",
-            themeColor: 'rgba(76, 161, 175, 0.4)',
-            isCollapsed: true,
-            images: [
-                { src: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=800&q=80", frame: 'frame-classic-gold', filter: 'ai-filter-2' }
-            ]
-        }
-    ];
-    memories = samples;
-    localStorage.setItem('kingdom_memories', JSON.stringify(memories));
+// Initial data handled by memories-data.js or logic above
+if (!memories || memories.length === 0) {
+    // Fallback if needed
+    memories = [];
 }
 
 let currentDraftImages = [];
