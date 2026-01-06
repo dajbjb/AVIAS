@@ -14,6 +14,7 @@
 </head>
 
 <body>
+    <button id="logout-btn" class="temp-logout-btn">Logout <i class="fa-solid fa-right-from-bracket"></i></button>
 
     <!-- Login & User Selection Screen -->
     <div id="login-overlay">
@@ -62,6 +63,7 @@
                     <!-- Names (Modern Classic) -->
                     <div class="names-section">
                         <h1 class="boutique-names playfair-italic">David & Aviya</h1>
+                        <div id="personal-welcome" class="personal-welcome montserrat">Welcome back</div>
                         <div class="minimal-divider"></div>
                     </div>
 
@@ -89,8 +91,12 @@
                 <div id="home-highlights"></div>
             </div>
         </section>
-        <section id="timeline" class="view">
-            <h1 class="liquid-text">Timeline</h1>
+        <section id="chat" class="view">
+            <div class="chat-placeholder">
+                <i class="fa-solid fa-comments"></i>
+                <h1 class="playfair-italic">Private Space</h1>
+                <p class="montserrat">Chat coming soon...</p>
+            </div>
         </section>
         <section id="gallery" class="view scrollable">
             <div class="gallery-container">
@@ -264,8 +270,8 @@
     <!-- Liquid Glass Navigation -->
     <nav class="glass-nav">
         <div class="nav-indicator"></div>
-        <button class="nav-item" data-tab="timeline">
-            <i class="fa-regular fa-calendar"></i>
+        <button class="nav-item" data-tab="chat">
+            <i class="fa-solid fa-message"></i>
         </button>
         <button class="nav-item active" data-tab="home">
             <i class="fa-solid fa-house"></i>
@@ -284,6 +290,7 @@
         <p>AI Designing Your Memory...</p>
     </div>
 
+    <script src="memories-data.js"></script>
     <script src="script.js"></script>
     <script src="login-logic.js"></script>
 </body>
