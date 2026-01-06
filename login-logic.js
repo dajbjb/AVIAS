@@ -94,11 +94,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateUserContext(name) {
-        // This can be used in the future to customize greetings, etc.
         console.log(`Current session user: ${name}`);
+        const welcomeEl = document.getElementById('personal-welcome');
+        if (welcomeEl && name) {
+            const displayName = name === 'Aviya' ? 'Aviya' : 'David';
+            welcomeEl.textContent = `Hey ${displayName}`;
+            welcomeEl.style.opacity = '1';
+        }
+    }
 
-        // Change "David & Aviya" header text based on who is logged in if we want, 
-        // but user only asked to store it.
-        // Actually, let's update the greeting to be more personal if name matches.
+    // Temporary logout functionality
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('kingdom_current_user');
+            location.reload();
+        });
     }
 });
