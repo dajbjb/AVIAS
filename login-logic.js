@@ -101,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
             welcomeEl.textContent = `Hey ${displayName}`;
             welcomeEl.style.opacity = '1';
         }
+        if (typeof window.renderHomeHighlights === 'function') window.renderHomeHighlights();
     }
 
     // Temporary logout functionality
