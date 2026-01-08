@@ -31,13 +31,12 @@ setInterval(createHeart, 800);
 
 // --- FIREBASE CONFIGURATION & SYNC ---
 const firebaseConfig = {
-    apiKey: "AIzaSyB0X6__li6tO-bgDTDfO9AumgWMOSgEz38",
-    authDomain: "create-a-project-a1ad8.firebaseapp.com",
-    projectId: "create-a-project-a1ad8",
-    storageBucket: "create-a-project-a1ad8.firebasestorage.app",
-    messagingSenderId: "437547204222",
-    appId: "1:437547204222:web:bc3bb027d5f6f227c4e22f",
-    measurementId: "G-ZBDL793CWM"
+    apiKey: "AIzaSyBP-QtaPE4FAKwXNIjOlJ0s5kuVX25GeuY",
+    authDomain: "kingdomapp-ec532.firebaseapp.com",
+    projectId: "kingdomapp-ec532",
+    storageBucket: "kingdomapp-ec532.firebasestorage.app",
+    messagingSenderId: "266165085520",
+    appId: "1:266165085520:web:fbcaa61695342509b6b855"
 };
 
 // Initialize Firebase (Compat)
@@ -54,23 +53,16 @@ const SyncManager = {
     LOCAL_STORY_KEY: 'kingdom_story_backup_v1',
 
     isConnected: false,
+    lastError: "No error yet.",
 
     init: function () {
         console.log("Starting Hybrid Sync Services...");
         this.createStatusIndicator();
 
-        // 1. ALWAYS Load Local Data First (Fixes "Reset deletes everything")
+        // 1. ALWAYS Load Local Data First
         this.loadLocalBackup();
 
-        // 2. DIAGNOSTIC: Check for Placeholder Config
-        if (firebaseConfig.projectId.includes('create-a-project')) {
-            const msg = "⚠️ CONNECTION ERROR: INVALID CONFIG\n\nYou are using a 'Placeholder' Project ID ('create-a-project-a1ad8').\nThis connects to NOWHERE.\n\nSOLUTION:\n1. Go to Firebase Console.\n2. Project Settings > General.\n3. Scroll to 'Your Apps' > Select 'Web'.\n4. Copy the `firebaseConfig` object.\n5. Paste it into `script.js` (lines 33-41).";
-            alert(msg);
-            this.updateStatus(false, "Invalid Config (Placeholder)");
-            return; // Stop trying to connect to nothing
-        }
-
-        // 3. Connect to Cloud
+        // 2. Connect to Cloud (Config is now valid)
         this.listenToChats();
         this.listenToStories();
         this.listenToMemories();
@@ -446,6 +438,11 @@ navItems.forEach(item => {
                 views.forEach(other => {
                     if (other.id !== target) other.classList.remove('active');
                 });
+
+                // STOP CAMERA EXPLICITLY if not on create tab
+                if (target !== 'create' && typeof stopCamera === 'function') {
+                    stopCamera();
+                }
 
                 // Show this one
                 if (!v.classList.contains('active')) {
