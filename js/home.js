@@ -3,6 +3,96 @@
  * Handles the clock, AI greeting, status rings, and highlights.
  */
 
+// Global State for Story Viewer
+let currentStoryIndex = 0;
+let activeStoriesList = [];
+let storyTimer = null;
+
+window.viewStatus = function (targetUser) {
+    const stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
+    const validityPeriod = 5 * 60 * 60 * 1000; // 5 Hours
+    const now = Date.now();
+
+    // Get all valid stories for the user
+    const userStories = stories.filter(s => s.author === targetUser && (now - s.timestamp) < validityPeriod).reverse();
+
+    if (userStories.length === 0) return;
+
+    // Init Viewer
+    activeStoriesList = userStories;
+    currentStoryIndex = 0;
+
+    const viewer = document.getElementById('story-viewer');
+    if (viewer) {
+        viewer.style.display = 'flex';
+        showStoryAtIndex(currentStoryIndex);
+
+        // Add navigation listeners
+        viewer.onclick = (e) => {
+            if (e.target.closest('.close-viewer-btn')) return;
+            const width = window.innerWidth;
+            if (e.clientX > width / 3) {
+                nextStory();
+            } else {
+                prevStory();
+            }
+        };
+    }
+};
+
+function showStoryAtIndex(index) {
+    if (index < 0 || index >= activeStoriesList.length) {
+        closeStoryViewer();
+        return;
+    }
+
+    const story = activeStoriesList[index];
+    const img = document.getElementById('story-viewer-img');
+    const text = document.getElementById('story-viewer-text');
+    const bar = document.getElementById('story-progress-fill');
+
+    if (img && text && bar) {
+        // Reset state for instant transition
+        bar.style.transition = 'none';
+        bar.style.width = '0%';
+
+        // Load Content
+        img.src = story.imageUrl;
+        text.textContent = story.text || "";
+        img.className = (story.filter && story.filter !== 'none') ? `viewer-img filter-${story.filter}` : 'viewer-img';
+
+        // Animate Bar
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                bar.style.transition = 'width 5s linear';
+                bar.style.width = '100%';
+            });
+        });
+
+        // Timer
+        if (storyTimer) clearTimeout(storyTimer);
+        storyTimer = setTimeout(nextStory, 5000);
+    }
+}
+
+function nextStory() {
+    if (currentStoryIndex < activeStoriesList.length - 1) {
+        currentStoryIndex++;
+        showStoryAtIndex(currentStoryIndex);
+    } else {
+        closeStoryViewer(); // End of stack
+    }
+}
+
+function prevStory() {
+    if (currentStoryIndex > 0) {
+        currentStoryIndex--;
+        showStoryAtIndex(currentStoryIndex);
+    } else {
+        showStoryAtIndex(0); // Restart first
+    }
+}
+
 function updateClock() {
     const now = new Date();
     const hour = now.getHours();
@@ -55,21 +145,24 @@ function getTimeContext() {
 }
 
 // Unified Home Render Function
-function renderHomeHighlights() {
+window.renderHomeHighlights = function () {
     updateClock();
     generateAIGreeting();
+    if (typeof window.renderStatusRings === 'function') window.renderStatusRings();
 
     // 1. Personal Greeting
     const currentUser = localStorage.getItem('kingdom_current_user') || 'Aviya';
     const namePlaceholder = document.getElementById('name-placeholder');
     if (namePlaceholder) namePlaceholder.textContent = currentUser;
 
-    // 2. Status Rings (Show only current user)
+    // 2. Status Rings (Inverted Logic: Show Partner Only)
     const statusItems = document.querySelectorAll('.status-item');
     statusItems.forEach(item => {
         const nameSpan = item.querySelector('.status-name');
         if (nameSpan) {
-            item.style.display = (nameSpan.textContent.trim() === currentUser) ? 'flex' : 'none';
+            // If I am David, show Aviya. If I am Aviya, show David.
+            const isPartner = nameSpan.textContent.trim() !== currentUser;
+            item.style.display = isPartner ? 'flex' : 'none';
         }
     });
 
@@ -92,9 +185,6 @@ function renderHomeHighlights() {
     selected.forEach(memory => {
         const item = document.createElement('div');
         item.className = `memory-item ${memory.isCollapsed ? 'collapsed' : ''}`;
-        // Assumes createMemoryHTML is available globally (from gallery.js)
-        // If gallery.js loads after home.js, this function might be undefined IF called immediately?
-        // renderHomeHighlights is called by SyncManager listener.
         if (typeof createMemoryHTML === 'function') {
             item.innerHTML = createMemoryHTML(memory);
             homeHighlightsContainer.appendChild(item);
@@ -106,13 +196,11 @@ function renderHomeHighlights() {
 setInterval(updateClock, 1000);
 
 async function generateAIGreeting() {
-    // If API KEY is not in window, try config?
     const key = window.GEMINI_API_KEY || "AIzaSyAXKu7u_nvbjEKT6xTZUIkXHTcJ6Fqn6-U";
-
     if (!key) return;
 
     const greetingEl = document.getElementById('ai-greeting');
-    if (greetingEl) greetingEl.innerHTML = '<span class="loading-dots">AI is crafting your welcome...</span>';
+    // if (greetingEl) greetingEl.innerHTML = '<span class="loading-dots">AI is crafting your welcome...</span>';
 
     const currentTimeContext = getTimeContext();
     const cachedData = JSON.parse(localStorage.getItem('kingdom_cached_greeting') || "{}");
@@ -141,9 +229,9 @@ async function generateAIGreeting() {
                 text: aiText, context: currentTimeContext, timestamp: Date.now()
             }));
             typeWriter(aiText, "ai-greeting");
-        } else { throw new Error("Invalid API response"); }
+        }
     } catch (error) {
-        console.error("AI Greeting Error:", error);
+        console.warn("AI Greeting Error:", error);
         if (greetingEl) greetingEl.textContent = cachedData.text || "Welcome to your sanctuary";
     }
 }
@@ -162,3 +250,114 @@ function typeWriter(text, elementId) {
     }
     type();
 }
+
+/**
+ * STORIES LOGIC (Fixed)
+ */
+window.renderStatusRings = function () {
+    const stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
+    const now = Date.now();
+    const validityPeriod = 5 * 60 * 60 * 1000; // 5 Hours
+
+    // Filter valid stories
+    const validStories = stories.filter(s => (now - s.timestamp) < validityPeriod);
+
+    // Group by user
+    const userStories = {
+        'Aviya': validStories.filter(s => s.author === 'Aviya'),
+        'David': validStories.filter(s => s.author === 'David')
+    };
+
+    ['Aviya', 'David'].forEach(user => {
+        const ringWrapper = document.getElementById(`ring-${user}`);
+        const avatar = document.getElementById(`avatar-${user}`);
+
+        if (ringWrapper && avatar) {
+            const hasStory = userStories[user].length > 0;
+
+            // Visual update
+            if (hasStory) {
+                ringWrapper.classList.add('has-story');
+                // Show latest story preview as avatar
+                avatar.src = userStories[user][0].imageUrl;
+                avatar.style.display = 'block';
+                // Hide Initials
+                const initials = ringWrapper.querySelector('.initials');
+                if (initials) initials.style.display = 'none';
+            } else {
+                ringWrapper.classList.remove('has-story');
+                avatar.style.display = 'none';
+                const initials = ringWrapper.querySelector('.initials');
+                if (initials) initials.style.display = 'block';
+            }
+        }
+    });
+};
+
+window.viewStatus = function (targetUser) {
+    const currentUser = localStorage.getItem('kingdom_current_user') || 'Aviya';
+
+    // Logic: Only allow viewing the PARTNER'S story (as per user request "David sees Aviya, Aviya sees David")
+    // But since the icon is hidden for self, clicking is only possible on partner.
+
+    const stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
+    const now = Date.now();
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+
+    const userStories = stories.filter(s => s.author === targetUser && (now - s.timestamp) < twentyFourHours);
+
+    if (userStories.length === 0) {
+        console.log("No stories for " + targetUser);
+        return;
+    }
+
+    // Open Viewer
+    const viewer = document.getElementById('story-viewer');
+    const img = document.getElementById('story-viewer-img');
+    const text = document.getElementById('story-viewer-text');
+    const bar = document.getElementById('story-progress-fill');
+
+    if (viewer && img) {
+        viewer.style.display = 'flex';
+        // Show latest for now (Index 0)
+        const story = userStories[0];
+        img.src = story.imageUrl;
+        text.textContent = story.text || "";
+        if (story.filter && story.filter !== 'none') {
+            img.className = `viewer-img filter-${story.filter}`;
+        } else {
+            img.className = 'viewer-img';
+        }
+
+        // Reset Animation
+        bar.style.transition = 'none';
+        bar.style.width = '0%';
+        setTimeout(() => {
+            bar.style.transition = 'width 5s linear';
+            bar.style.width = '100%';
+        }, 50);
+
+        // Auto Close
+        if (storyTimer) clearTimeout(storyTimer);
+        storyTimer = setTimeout(() => {
+            closeStoryViewer();
+        }, 5000);
+    }
+};
+
+window.closeStoryViewer = function () {
+    const viewer = document.getElementById('story-viewer');
+    if (viewer) viewer.style.display = 'none';
+    if (storyTimer) clearTimeout(storyTimer);
+    const bar = document.getElementById('story-progress-fill');
+    if (bar) {
+        bar.style.transition = 'none';
+        bar.style.width = '0%';
+    }
+};
+
+// Bind Close Button
+document.addEventListener('DOMContentLoaded', () => {
+    const closeBtn = document.getElementById('close-viewer');
+    if (closeBtn) closeBtn.addEventListener('click', window.closeStoryViewer);
+});
