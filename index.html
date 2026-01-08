@@ -161,6 +161,7 @@
                 </div>
 
                 <div class="chat-input-area glass-nav-resemblance">
+                    <button id="chat-camera-btn" title="Send Photo"><i class="fa-solid fa-camera"></i></button>
                     <button id="chat-gif-btn" title="Add GIF"><i class="fa-solid fa-icons"></i></button>
                     <input type="text" id="chat-input" placeholder="Write a message..." autocomplete="off">
                     <button id="chat-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
@@ -177,7 +178,7 @@
 
                 <div class="camera-overlay">
                     <div class="camera-header">
-                        <h2 class="playfair-italic">New Story</h2>
+                        <h2 class="playfair-italic" id="camera-title">New Story</h2>
                     </div>
 
                     <div class="camera-controls">
@@ -211,6 +212,43 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- AI Choice Modal -->
+            <div id="ai-choice-modal" class="modal-overlay" style="display: none;">
+                <div class="glass-panel modal-content-centered">
+                    <h3 class="playfair-italic" style="margin-bottom: 20px;">Choose Editing Mode</h3>
+                    <div class="modal-buttons-col">
+                        <button id="btn-edit-ai" class="action-btn primary-glow"
+                            style="width: 100%; margin-bottom: 10px;">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> AI Magic
+                        </button>
+                        <button id="btn-edit-manual" class="action-btn secondary" style="width: 100%;">
+                            <i class="fa-solid fa-hand-sparkles"></i> Manual Edit
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Text Question Modal -->
+            <div id="ai-text-modal" class="modal-overlay" style="display: none;">
+                <div class="glass-panel modal-content-centered">
+                    <h3 class="playfair-italic" style="margin-bottom: 20px;">Add Smart Caption?</h3>
+                    <p style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 20px;">The AI can generate a caption based
+                        on the vibe.</p>
+                    <div class="modal-buttons-row">
+                        <button id="btn-ai-text-no" class="editor-btn secondary">No</button>
+                        <button id="btn-ai-text-yes" class="editor-btn primary">Yes</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Analysis Loader -->
+            <div id="ai-loader" class="ai-loader-overlay" style="display: none;">
+                <div class="ai-brain-pulse">
+                    <i class="fa-solid fa-brain"></i>
+                </div>
+                <p id="ai-status-text" class="montserrat">Analyzing Scene...</p>
             </div>
 
             <!-- Post-Capture Editor (Instagram Style) -->
@@ -257,8 +295,12 @@
                     <div class="story-inputs">
                         <input type="text" id="story-caption" placeholder="Add a caption..." class="glass-input">
                     </div>
+                    <!-- View Once Toggle -->
+                    <button id="view-once-btn" class="icon-btn view-once-btn"
+                        style="display: none; border-radius: 50%; font-weight: bold; font-family: sans-serif; margin-right: 10px;">1</button>
+
                     <button id="send-story-btn" class="editor-btn primary">
-                        <span>Share</span> <i class="fa-solid fa-paper-plane"></i>
+                        <span id="send-btn-text">Share</span> <i class="fa-solid fa-paper-plane"></i>
                     </button>
                 </div>
             </div>
