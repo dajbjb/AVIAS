@@ -3,6 +3,17 @@
  * Generates floating hearts for the 'Tech & Love' vibe.
  */
 
+window.onerror = function (msg, url, line) {
+    // Emergency Rescue: Hide loaders if JS crashes
+    const loaders = document.querySelectorAll('.ai-loader, .loading-screen');
+    loaders.forEach(l => l.style.display = 'none');
+
+    // Alert user if not a known benign error
+    if (!msg.includes('ResizeObserver')) {
+        alert("App Error: " + msg + "\nLine: " + line);
+    }
+};
+
 function createHeart() {
     const heart = document.createElement('div');
     heart.classList.add('heart');
@@ -68,7 +79,7 @@ const SyncManager = {
         this.listenToMemories();
     },
 
-    lastError: "No error yet.",
+
 
     createStatusIndicator: function () {
         const div = document.createElement('div');
