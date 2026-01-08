@@ -18,12 +18,16 @@ let navState = {
 function moveIndicatorToTab(tabElement) {
     if (!tabElement || !indicator) return;
     const navBar = document.querySelector('.glass-nav');
-    if (!navBar) return;
-    const navRect = navBar.getBoundingClientRect();
+    const navInner = document.getElementById('nav-main-items'); // Use inner container for calculation
+
+    if (!navBar || !navInner) return;
+
+    // We calc relative to the inner container now because the items are inside it
+    const innerRect = navInner.getBoundingClientRect();
     const tabRect = tabElement.getBoundingClientRect();
 
-    // Center logic
-    const targetCenterX = tabRect.left + (tabRect.width / 2) - navRect.left;
+    // Center logic relative to the inner container
+    const targetCenterX = tabRect.left + (tabRect.width / 2) - innerRect.left;
     const targetLeftX = targetCenterX - (indicator.offsetWidth / 2);
 
     if (tabElement.classList.contains('plus-tab')) {
@@ -55,6 +59,7 @@ window.addEventListener('resize', initNav);
 // Drag Events
 if (indicator) {
     const navBar = document.querySelector('.glass-nav');
+    // We bind drag events, but calculations must respect navInner
     indicator.addEventListener('pointerdown', (e) => {
         navState.isDragging = true;
         navState.startX = e.clientX;
@@ -68,16 +73,21 @@ if (indicator) {
 
     indicator.addEventListener('pointermove', (e) => {
         if (!navState.isDragging) return;
+        const navInner = document.getElementById('nav-main-items');
+        if (!navInner) return;
+
         e.preventDefault();
         const delta = e.clientX - navState.startX;
         let newX = navState.initialX + delta;
-        const max = navBar.offsetWidth - indicator.offsetWidth - 10;
+
+        // Calculate max based on inner width
+        const max = navInner.offsetWidth - indicator.offsetWidth;
         newX = Math.max(0, Math.min(newX, max));
 
         if (navState.rAF) cancelAnimationFrame(navState.rAF);
         navState.rAF = requestAnimationFrame(() => {
-            const navRect = navBar.getBoundingClientRect();
-            const centerNav = navRect.width / 2;
+            const innerRect = navInner.getBoundingClientRect();
+            const centerNav = innerRect.width / 2;
             const indicatorCenter = newX + (indicator.offsetWidth / 2);
             const distFromCenter = Math.abs(centerNav - indicatorCenter);
             const threshold = 70;
@@ -112,8 +122,10 @@ if (indicator) {
 function findClosestTab(x) {
     let closest = null;
     let minDiff = Infinity;
-    const navBar = document.querySelector('.glass-nav');
-    const navRect = navBar.getBoundingClientRect();
+    const navInner = document.getElementById('nav-main-items');
+    if (!navInner) return null;
+
+    const navRect = navInner.getBoundingClientRect();
     navItems.forEach(item => {
         const iRect = item.getBoundingClientRect();
         const iX = iRect.left - navRect.left;
@@ -126,12 +138,46 @@ function findClosestTab(x) {
     return closest;
 }
 
+// --- NAV MODE SWITCHING ---
+const mainNavItems = document.getElementById('nav-main-items');
+const navFilters = document.getElementById('nav-filters-container');
+const navFilterBack = document.getElementById('nav-filter-back');
+const glassNav = document.getElementById('main-nav'); // Get the main nav element
+
+function setNavMode(mode) {
+    if (!glassNav) return;
+
+    if (mode === 'filters') {
+        glassNav.classList.add('filters-active');
+    } else {
+        glassNav.classList.remove('filters-active');
+        // Re-init indicator position if returning to main
+        setTimeout(initNav, 300); // Wait for transition roughly
+    }
+}
+
+if (navFilterBack) {
+    navFilterBack.addEventListener('click', () => {
+        setNavMode('main');
+    });
+}
+
 navItems.forEach(item => {
     item.addEventListener('click', () => {
         const target = item.getAttribute('data-tab');
-        navItems.forEach(i => i.classList.remove('active'));
-        item.classList.add('active');
-        moveIndicatorToTab(item);
+
+        // Only update active state if NOT going to create/filter mode (visually safer)
+        if (target !== 'create') {
+            navItems.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            moveIndicatorToTab(item);
+        } else {
+            // If clicking create, we keep 'home' or previous active visually or just let the slide happen
+            // Actually, let's allow it to be active for a second before sliding away
+            navItems.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            moveIndicatorToTab(item);
+        }
 
         views.forEach(v => {
             if (v.id === target) {
@@ -139,11 +185,19 @@ navItems.forEach(item => {
 
                 // Camera Handling
                 if (target === 'create') {
-                    setTimeout(() => { if (typeof startCamera === 'function') startCamera(); }, 300);
-                    // Set mode default
+                    // Delay camera start slightly for animation smoothness
+                    setTimeout(() => {
+                        if (typeof startCamera === 'function') startCamera();
+                        // Switch nav to filters AFTER camera starts or concurrently
+                        setNavMode('filters');
+                    }, 50);
+
                     window.activeCameraMode = 'story';
+
                 } else {
                     if (typeof stopCamera === 'function') stopCamera();
+                    // Ensure normal nav is visible when leaving camera
+                    setNavMode('main');
                 }
 
                 if (!v.classList.contains('active')) {
