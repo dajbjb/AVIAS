@@ -59,10 +59,18 @@ const SyncManager = {
         console.log("Starting Hybrid Sync Services...");
         this.createStatusIndicator();
 
-        // 1. Load Local Data Immediately (Instant Load)
+        // 1. ALWAYS Load Local Data First (Fixes "Reset deletes everything")
         this.loadLocalBackup();
 
-        // 2. Connect to Cloud
+        // 2. DIAGNOSTIC: Check for Placeholder Config
+        if (firebaseConfig.projectId.includes('create-a-project')) {
+            const msg = "⚠️ CONNECTION ERROR: INVALID CONFIG\n\nYou are using a 'Placeholder' Project ID ('create-a-project-a1ad8').\nThis connects to NOWHERE.\n\nSOLUTION:\n1. Go to Firebase Console.\n2. Project Settings > General.\n3. Scroll to 'Your Apps' > Select 'Web'.\n4. Copy the `firebaseConfig` object.\n5. Paste it into `script.js` (lines 33-41).";
+            alert(msg);
+            this.updateStatus(false, "Invalid Config (Placeholder)");
+            return; // Stop trying to connect to nothing
+        }
+
+        // 3. Connect to Cloud
         this.listenToChats();
         this.listenToStories();
         this.listenToMemories();
@@ -124,7 +132,12 @@ const SyncManager = {
                     scrollToBottom();
                 }
             }, (error) => {
-                this.updateStatus(false, error.message);
+                let msg = error.message;
+                if (error.code === 'permission-denied') {
+                    msg = "PERMISSION DENIED: You need to fix Firestore Rules.\nGo to Firebase Console -> Firestore -> Rules.\nChange to: allow read, write: if true;";
+                }
+                if (!this.isConnected) alert("Sync Error: " + msg);
+                this.updateStatus(false, msg);
             });
     },
 
@@ -631,6 +644,124 @@ function typeWriter(text, elementId) {
     }
     type();
 }
+
+let cameraStream = null; // Global variable to hold the camera stream
+
+// 1. Smart Camera Access with Fallbacks
+async function startCamera() {
+    if (cameraStream) return; // Already running
+
+    const fallbackContainer = document.getElementById('mobile-fallback-container');
+    const videoEl = document.getElementById('camera-feed');
+
+    const constraints = {
+        video: {
+            facingMode: 'user', // Front camera preference
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        },
+        audio: false
+    };
+
+    try {
+        // Attempt standard access
+        cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+        if (videoEl) {
+            videoEl.srcObject = cameraStream;
+            videoEl.onloadedmetadata = () => {
+                videoEl.play().catch(e => {
+                    console.warn("Autoplay blocked, showing manual start", e);
+                    if (fallbackContainer) fallbackContainer.style.display = 'block';
+                });
+            };
+            // Hide fallback if successful
+            if (fallbackContainer) fallbackContainer.style.display = 'none';
+        }
+    } catch (err) {
+        console.error("Camera Access Error:", err);
+        // If error (e.g., Not Secure Context on simple HTTP), show fallback
+        if (fallbackContainer) {
+            fallbackContainer.style.display = 'block';
+        }
+    }
+}
+
+function stopCamera() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+}
+
+// Manual Start Button (for permission issues or blocked autoplay)
+const manualStartBtn = document.getElementById('start-camera-manual');
+if (manualStartBtn) {
+    manualStartBtn.addEventListener('click', () => {
+        startCamera();
+        // Or if it's already "started" but paused, try play?
+        const videoEl = document.getElementById('camera-feed');
+        if (videoEl && videoEl.paused && videoEl.srcObject) {
+            videoEl.play();
+            const fallbackContainer = document.getElementById('mobile-fallback-container');
+            if (fallbackContainer) fallbackContainer.style.display = 'none';
+        }
+    });
+}
+
+// File Input Fallback (Native Camera App)
+const cameraFileInput = document.getElementById('camera-file-input');
+if (cameraFileInput) {
+    cameraFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const img = new Image();
+            img.onload = () => {
+                // Draw to canvas to standardize
+                const canvas = document.getElementById('camera-canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+
+                // Set captured image
+                const capturedImage = document.getElementById('captured-image');
+                capturedImage.src = canvas.toDataURL('image/jpeg', 0.85);
+
+                // Switch to editor
+                document.getElementById('camera-interface').style.display = 'none';
+                document.getElementById('story-editor').style.display = 'flex';
+            };
+            img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// 2. Tab Awareness
+const createTabObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        if (mutation.target.id === 'create') {
+            const isVisible = window.getComputedStyle(mutation.target).display !== 'none';
+            if (mutation.target.classList.contains('active') || isVisible) {
+                // Small delay to allow transition
+                setTimeout(startCamera, 300);
+            } else {
+                stopCamera();
+            }
+        }
+    });
+});
+
+// Start observing the 'create' tab for changes in its 'active' class or display style
+const createTab = document.getElementById('create');
+if (createTab) {
+    createTabObserver.observe(createTab, { attributes: true, attributeFilter: ['class', 'style'] });
+}
+
 
 // Initial load
 setInterval(updateClock, 1000);
