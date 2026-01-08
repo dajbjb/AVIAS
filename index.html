@@ -172,10 +172,14 @@
         </section>
         <section id="create" class="view">
             <!-- Camera Interface -->
-            <!-- Camera Interface -->
             <div id="camera-interface" class="camera-interface">
                 <video id="camera-feed" autoplay playsinline muted></video>
                 <canvas id="camera-canvas" style="display:none;"></canvas>
+                <canvas id="ar-overlay"></canvas>
+                <div id="ar-debug-overlay"
+                    style="position:absolute; top:10px; left:10px; color:lime; background:rgba(0,0,0,0.5); padding:5px; z-index:9999; pointer-events:none; font-family:monospace; font-size:12px;">
+                    AR Status: Init...
+                </div>
                 <div id="screen-flash" class="screen-flash-overlay"></div>
 
                 <div class="camera-overlay">
@@ -193,39 +197,20 @@
                     </div>
 
                     <!-- Bottom Area -->
-                    <!-- Bottom Area -->
                     <div class="camera-bottom-area">
-                        <!-- Level 2 Filter Capsule (Floating above) -->
-                        <div class="filter-capsule-container">
-                            <div class="glass-capsule" id="level2-capsule">
-                                <span class="current-label" id="capsule-label">Normal</span>
-                                <i class="fa-solid fa-chevron-down" style="font-size:0.7rem; margin-left:5px;"></i>
 
-                                <!-- Hidden Grid for Expansion -->
-                                <div class="capsule-grid" id="capsule-grid">
-                                    <div class="capsule-item active" data-filter="none">Normal</div>
-                                    <div class="capsule-item" data-filter="vintage">Vintage</div>
-                                    <div class="capsule-item" data-filter="noir">Noir</div>
-                                    <div class="capsule-item" data-filter="warm">Warm</div>
-                                    <div class="capsule-item" data-filter="cold">Cold</div>
-                                    <div class="capsule-item" data-filter="drama">Drama</div>
-                                    <div class="capsule-item" data-filter="cinema">Cinema</div>
-                                </div>
-                            </div>
-                        </div>
 
                         <!-- Carousel (Level 3 AR Filters) -->
                         <div class="filter-carousel-wrapper" id="filter-carousel">
                             <div class="filter-track" id="filter-track">
-                                <!-- Dynamic JS will populate Level 3 filters -->
                                 <div class="filter-bubble active" data-filter="none" data-name="Normal">
-                                    <div style="width:100%;height:100%;background:#ccc;border-radius:50%;"></div>
+                                    <div class="bubble-inner" style="background:#ccc;"></div>
                                 </div>
-                                <div class="filter-bubble" data-filter="bunny" data-name="Bunny Ears">
-                                    <div style="width:100%;height:100%;background:pink;border-radius:50%;"></div>
+                                <div class="filter-bubble" data-filter="bunny" data-name="Bunny Options">
+                                    <div class="bubble-inner" style="background:pink;">🐰</div>
                                 </div>
                                 <div class="filter-bubble" data-filter="glasses" data-name="Cool Glasses">
-                                    <div style="width:100%;height:100%;background:black;border-radius:50%;"></div>
+                                    <div class="bubble-inner" style="background:black; color:white;">👓</div>
                                 </div>
                             </div>
                         </div>
@@ -402,88 +387,37 @@
                 <div class="game-tabs-wrapper">
                     <div class="game-tabs">
                         <div class="game-tab-indicator"></div>
-                        <button class="game-tab active" data-game="wheel">
-                            <i class="fa-solid fa-dharmachakra"></i>
+                        <button class="game-tab active" data-game="slot1">
+                            <i class="fa-solid fa-gamepad"></i>
                         </button>
-                        <button class="game-tab" data-game="game2">
-                            <i class="fa-solid fa-puzzle-piece"></i>
+                        <button class="game-tab" data-game="slot2">
+                            <i class="fa-solid fa-gamepad"></i>
                         </button>
-                        <button class="game-tab" data-game="game3">
-                            <i class="fa-solid fa-dice"></i>
-                        </button>
-                        <button class="game-tab" data-game="game4">
-                            <i class="fa-solid fa-trophy"></i>
+                        <button class="game-tab" data-game="slot3">
+                            <i class="fa-solid fa-gamepad"></i>
                         </button>
                     </div>
                 </div>
 
-                <div id="game-wheel" class="game-view active">
-                    <header class="quality-header">
-                        <h1 class="playfair-italic">Moment of Choice</h1>
-                        <p class="montserrat">Customize and Let fate decide</p>
-                    </header>
-
-                    <!-- Customization Panel -->
-                    <div class="wheel-config glass-card">
-                        <h3 class="montserrat">Customize Options</h3>
-                        <div id="wheel-inputs" class="wheel-inputs">
-                            <div class="input-row">
-                                <input type="text" placeholder="Option 1" value="Movie Night">
-                                <button class="remove-input"><i class="fa-solid fa-times"></i></button>
-                            </div>
-                            <div class="input-row">
-                                <input type="text" placeholder="Option 2" value="Fancy Dinner">
-                                <button class="remove-input"><i class="fa-solid fa-times"></i></button>
-                            </div>
-                        </div>
-                        <button id="add-option" class="add-option-btn">
-                            <i class="fa-solid fa-plus"></i> Add Option
-                        </button>
-                    </div>
-
-                    <div class="wheel-wrapper">
-                        <div class="wheel-container">
-                            <div class="wheel-pointer">
-                                <i class="fa-solid fa-location-arrow"></i>
-                            </div>
-                            <div id="wheel" class="wheel"></div>
-                            <button id="spin-btn" class="spin-button">
-                                <span>SPIN</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div id="wheel-result" class="wheel-result-card glass-card" style="display: none;">
-                        <div class="result-glow"></div>
-                        <h2 class="playfair-italic" id="result-text">Something Special</h2>
-                        <p class="montserrat">Enjoy your time together!</p>
-                        <button class="close-result" id="close-result">Awesome!</button>
-                    </div>
-                </div>
-
-                <div id="game-game2" class="game-view">
+                <div id="game-slot1" class="game-view active">
+                    <!-- Future Game Slot 1 -->
                     <div class="test-game glass-card">
-                        <h2 class="playfair-italic">Questions for Two</h2>
-                        <p class="montserrat" id="question-box">Click the button for a conversation starter</p>
-                        <button class="post-button" id="next-question">Random Question</button>
+                        <h2 class="playfair-italic">Game Slot 1</h2>
+                        <p class="montserrat">Coming Soon...</p>
                     </div>
                 </div>
-                <div id="game-game3" class="game-view">
+                <div id="game-slot2" class="game-view">
+                    <!-- Future Game Slot 2 -->
                     <div class="test-game glass-card">
-                        <h2 class="playfair-italic">Love Dice</h2>
-                        <div class="dice-container">
-                            <i id="dice-1" class="fa-solid fa-dice-one"></i>
-                            <i id="dice-2" class="fa-solid fa-dice-six"></i>
-                        </div>
-                        <button class="post-button" id="roll-dice">Roll the Dice</button>
+                        <h2 class="playfair-italic">Game Slot 2</h2>
+                        <p class="montserrat">Coming Soon...</p>
                     </div>
                 </div>
-                <div id="game-game4" class="game-view">
+                <div id="game-slot3" class="game-view">
+                    <!-- Future Game Slot 3 -->
                     <div class="test-game glass-card">
-                        <h2 class="playfair-italic">Boutique Memory</h2>
-                        <p class="montserrat">A simple tap counter for testing</p>
-                        <div class="counter-display" id="tap-count">0</div>
-                        <button class="post-button" id="tap-btn">Tap Together!</button>
+                        <h2 class="playfair-italic">Game Slot 3</h2>
+                        <p class="montserrat">Coming Soon...</p>
                     </div>
                 </div>
             </div>
@@ -517,23 +451,44 @@
         preload="auto"></audio>
 
     <!-- Liquid Glass Navigation -->
-    <nav class="glass-nav">
-        <div class="nav-indicator"></div>
-        <button class="nav-item" data-tab="chat">
-            <i class="fa-solid fa-message"></i>
-        </button>
-        <button class="nav-item active" data-tab="home">
-            <i class="fa-solid fa-house"></i>
-        </button>
-        <button class="nav-item plus-tab" data-tab="create">
-            <i class="fa-solid fa-plus"></i>
-        </button>
-        <button class="nav-item" data-tab="gallery">
-            <i class="fa-solid fa-images"></i>
-        </button>
-        <button class="nav-item" data-tab="quality-time">
-            <i class="fa-solid fa-heart-circle-check"></i>
-        </button>
+    <!-- Liquid Glass Navigation -->
+    <nav class="glass-nav" id="main-nav">
+        <!-- Standard Navigation Items -->
+        <div class="nav-main-items" id="nav-main-items">
+            <div class="nav-indicator"></div>
+            <button class="nav-item" data-tab="chat">
+                <i class="fa-solid fa-message"></i>
+            </button>
+            <button class="nav-item active" data-tab="home">
+                <i class="fa-solid fa-house"></i>
+            </button>
+            <button class="nav-item plus-tab" data-tab="create">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+            <button class="nav-item" data-tab="gallery">
+                <i class="fa-solid fa-images"></i>
+            </button>
+            <button class="nav-item" data-tab="quality-time">
+                <i class="fa-solid fa-heart-circle-check"></i>
+            </button>
+        </div>
+
+        <!-- Camera Filter Controls (Hidden by default) -->
+        <div class="nav-filters-container" id="nav-filters-container">
+            <button class="nav-filter-back" id="nav-filter-back">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+
+            <div class="nav-filters-scroll">
+                <button class="nav-filter-item active" data-filter="none">Normal</button>
+                <button class="nav-filter-item" data-filter="vintage">Vintage</button>
+                <button class="nav-filter-item" data-filter="noir">Noir</button>
+                <button class="nav-filter-item" data-filter="warm">Warm</button>
+                <button class="nav-filter-item" data-filter="cold">Cold</button>
+                <button class="nav-filter-item" data-filter="drama">Drama</button>
+                <button class="nav-filter-item" data-filter="cinema">Cinema</button>
+            </div>
+        </div>
     </nav>
 
     <!-- AI Designing Loader Overlay -->
@@ -548,6 +503,9 @@
         <img class="modal-content" id="modal-image">
     </div>
 
+
+    <!-- AR Face Detection Library (Modern Fork) -->
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 
     <script src="js/core.js" defer></script>
     <script src="js/navigation.js" defer></script>
