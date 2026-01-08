@@ -1372,55 +1372,94 @@ function renderChat() {
     // Mark as read if we are viewing
     const chatTabActive = document.querySelector('.nav-item.active[data-tab="chat"]');
     if (chatTabActive) {
-        SyncManager.markMessagesAsRead(otherUser);
+        SyncManager.markMessagesAsRead(currentUser);
+        // Refresh local history after mark as read update
+        chatHistory = SyncManager.getLocal();
+        updateUnreadBadge();
+    }
+    SyncManager.markMessagesAsRead(currentUser);
+    // Refresh local history after mark as read update
+    chatHistory = SyncManager.getLocal();
+    updateUnreadBadge();
+}
+
+let lastDate = null;
+
+chatHistory.forEach(msg => {
+    // Date Separator
+    const msgDateObj = new Date(msg.timestamp);
+    const msgDate = msgDateObj.toLocaleDateString();
+    if (msgDate !== lastDate) {
+        const separator = document.createElement('div');
+        separator.className = 'chat-date-separator';
+        const today = new Date().toLocaleDateString();
+        separator.textContent = (msgDate === today) ? 'Today' : msgDate;
+        chatHistoryList.appendChild(separator);
+        lastDate = msgDate;
     }
 
-    let lastDate = null;
+    const isMine = msg.sender === currentUser;
+    const alignClass = isMine ? 'msg-left' : 'msg-right';
+    const bubble = document.createElement('div');
+    bubble.className = `message-bubble ${alignClass}`;
 
-    chatHistory.forEach(msg => {
-        // Date Separator
-        const msgDateObj = new Date(msg.timestamp);
-        const msgDate = msgDateObj.toLocaleDateString();
-        if (msgDate !== lastDate) {
-            const separator = document.createElement('div');
-            separator.className = 'chat-date-separator';
-            const today = new Date().toLocaleDateString();
-            separator.textContent = (msgDate === today) ? 'Today' : msgDate;
-            chatHistoryList.appendChild(separator);
-            lastDate = msgDate;
+    const time = msgDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    // Ticks Logic
+    let tickHtml = '';
+    if (isMine) {
+        // Check mark logic: sent (v), read (vv blue)
+        const status = msg.status || 'sent';
+        const tickClass = status === 'read' ? 'ticks-read' : '';
+        // Icons: Check (sent), DoubleCheck (read/delivered logic)
+        // If read -> blue double check. If sent -> gray single check. 
+        // We can simplify: sent=single, read=double-blue.
+
+        const icon = status === 'read' ? '<i class="fa-solid fa-check-double"></i>' : '<i class="fa-solid fa-check"></i>';
+        tickHtml = `<span class="msg-ticks ${tickClass}">${icon}</span>`;
+    }
+
+    let contentHtml = msg.text;
+
+    // Handle Image / GIF types
+    if (msg.type === 'gif') {
+        contentHtml = `<img src="${msg.text}" class="chat-gif">`;
+    }
+    else if (msg.type === 'image') {
+        if (msg.viewOnce) {
+            // View Once Logic
+            const viewedByMe = msg.viewedBy && msg.viewedBy.includes(currentUser);
+            if (viewedByMe) {
+                contentHtml = `
+                    <div class="view-once-expired">
+                        <i class="fa-solid fa-eye-slash"></i> <span>Opened</span>
+                    </div>`;
+            } else {
+                contentHtml = `
+                    <div class="view-once-bubble" onclick="viewChatImage('${msg.id}')">
+                        <i class="fa-solid fa-circle-1"></i> <span>Photo</span>
+                    </div>`;
+            }
+        } else {
+            // Standard Image
+            contentHtml = `<img src="${msg.text}" class="chat-img" onclick="viewChatImage('${msg.id}')">`;
         }
+    }
 
-        const isMine = msg.sender === currentUser;
-        const alignClass = isMine ? 'msg-left' : 'msg-right';
-        const bubble = document.createElement('div');
-        bubble.className = `message-bubble ${alignClass}`;
-
-        const time = msgDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-        // Ticks Logic
-        let tickHtml = '';
-        if (isMine) {
-            // Check mark logic: sent (v), read (vv blue)
-            const status = msg.status || 'sent';
-            const tickClass = status === 'read' ? 'ticks-read' : '';
-            const icon = status === 'read' ? '<i class="fa-solid fa-check-double"></i>' : (status === 'delivered' ? '<i class="fa-solid fa-check-double"></i>' : '<i class="fa-solid fa-check"></i>');
-            tickHtml = `<span class="msg-ticks ${tickClass}">${icon}</span>`;
-        }
-
-        bubble.innerHTML = `
+    bubble.innerHTML = `
             <span class="message-sender">${msg.sender}</span>
-            ${msg.type === 'gif' ? `<img src="${msg.text}" class="chat-gif">` : msg.text}
+            ${contentHtml}
             <div class="msg-meta">
-                ${tickHtml}
                 <span class="message-time">${time}</span>
+                ${tickHtml}
             </div>
         `;
 
-        chatHistoryList.appendChild(bubble);
-    });
+    chatHistoryList.appendChild(bubble);
+});
 
-    scrollToBottom();
-}
+scrollToBottom();
+
 
 function scrollToBottom() {
     if (chatHistoryList) {
@@ -1445,18 +1484,25 @@ function sendGif(imgUrl) {
     toggleGifPicker(false); // Close after sending
 }
 
-function sendChatContent(content, type) {
+function sendChatContent(content, type, viewOnce = false) {
     const currentUser = localStorage.getItem('kingdom_current_user') || 'Aviya';
 
     const newMessage = {
+        id: Date.now(),
         text: content,
-        type: type, // 'text' or 'gif'
+        type: type, // 'text', 'gif', or 'image'
+        viewOnce: viewOnce,
+        viewedBy: [], // Track who viewed viewOnce messages
         sender: currentUser,
         timestamp: Date.now()
     };
 
-    // Use SyncManager instead of local push
-    SyncManager.sendChat(newMessage);
+    // Update Local Instance directly for speed before SyncManager saves
+    chatHistory.push(newMessage);
+    SyncManager.saveData(chatHistory);
+    renderChat();
+
+
 
     chatInput.value = '';
 
@@ -1665,65 +1711,169 @@ if (filterBtns) {
 }
 
 // 4. Capture Logic (Robust)
+// 4. Capture Logic (Robust)
+// 4. Capture & AI Logic
+const aiChoiceModal = document.getElementById('ai-choice-modal');
+const aiTextModal = document.getElementById('ai-text-modal');
+const aiLoader = document.getElementById('ai-loader');
+const btnManual = document.getElementById('btn-edit-manual');
+const btnAI = document.getElementById('btn-edit-ai');
+const btnTextYes = document.getElementById('btn-ai-text-yes');
+const btnTextNo = document.getElementById('btn-ai-text-no');
+const aiStatus = document.getElementById('ai-status-text');
+
 if (captureBtn) {
     captureBtn.addEventListener('click', () => {
+        captureBtn.classList.add('clicked');
+        setTimeout(() => captureBtn.classList.remove('clicked'), 200);
+
         if (!videoElement || !canvasElement) return;
 
-        // Ensure video is playing and has data
-        if (videoElement.readyState < 2) {
-            console.warn("Video not ready yet");
-            return;
+        // Force check
+        if (videoElement.videoWidth === 0) {
+            videoElement.play().catch(e => console.log(e));
         }
 
-        const width = videoElement.videoWidth;
-        const height = videoElement.videoHeight;
+        const width = videoElement.videoWidth || 1280;
+        const height = videoElement.videoHeight || 720;
         canvasElement.width = width;
         canvasElement.height = height;
         const ctx = canvasElement.getContext('2d');
 
-        // Mirror check (if front camera)
-        // For simplicity in V2, we assume user facing and mirror
         ctx.translate(width, 0);
         ctx.scale(-1, 1);
         ctx.drawImage(videoElement, 0, 0, width, height);
 
-        capturedImage.src = canvasElement.toDataURL('image/jpeg', 0.9);
+        // FREEZE VIDEO
+        videoElement.pause();
 
-        // Reset Editor State
-        textLayer.innerHTML = '';
-        if (storyCaptionInput) storyCaptionInput.value = '';
-
-        cameraInterface.style.display = 'none';
-        storyEditor.style.display = 'flex';
-
-        // Apply current filter to preview image visually
-        capturedImage.className = 'preview-img';
-        if (currentFilter !== 'none') capturedImage.classList.add(`filter-${currentFilter}`);
-
-        // Add Effects to Editor Preview as well
-        const editorPreview = document.getElementById('editor-preview-container');
-        // Clear old effects
-        const oldEffects = editorPreview.querySelectorAll('.dynamic-effect-overlay');
-        oldEffects.forEach(e => e.remove());
-
-        // Add new
-        if (currentFilter === 'vintage' || currentFilter === 'noir') {
-            const grain = document.createElement('div');
-            grain.className = 'effect-grain-overlay dynamic-effect-overlay';
-            editorPreview.appendChild(grain);
-        }
-        if (currentFilter === 'warm') {
-            const glow = document.createElement('div');
-            glow.className = 'effect-warm-overlay dynamic-effect-overlay';
-            editorPreview.appendChild(glow);
-        }
-        if (currentFilter === 'vintage') {
-            const sparkle = document.createElement('div');
-            sparkle.className = 'effect-sparkle-overlay dynamic-effect-overlay';
-            editorPreview.appendChild(sparkle);
-        }
+        // Show Choice
+        if (aiChoiceModal) aiChoiceModal.style.display = 'flex';
     });
 }
+
+// Manual Flow
+if (btnManual) {
+    btnManual.onclick = () => {
+        aiChoiceModal.style.display = 'none';
+        goToEditor();
+    };
+}
+
+// AI Flow
+if (btnAI) {
+    btnAI.onclick = () => {
+        aiChoiceModal.style.display = 'none';
+        startAIProcess();
+    };
+}
+
+function startAIProcess() {
+    if (aiLoader) aiLoader.style.display = 'flex';
+
+    // Simulation
+    setTimeout(() => { if (aiStatus) aiStatus.innerText = "Scanning Mood..."; }, 1000);
+    setTimeout(() => { if (aiStatus) aiStatus.innerText = "Applying Magic..."; }, 2500);
+
+    setTimeout(() => {
+        aiLoader.style.display = 'none';
+        aiTextModal.style.display = 'flex';
+    }, 3800);
+}
+
+// AI Text Decisions
+if (btnTextYes) {
+    btnTextYes.onclick = () => {
+        aiTextModal.style.display = 'none';
+        applyAIEdit(true);
+    };
+}
+
+if (btnTextNo) {
+    btnTextNo.onclick = () => {
+        aiTextModal.style.display = 'none';
+        applyAIEdit(false);
+    };
+}
+
+function applyAIEdit(addText) {
+    // 1. Random Filter
+    const filters = ['vintage', 'noir', 'warm'];
+    const randomFilter = filters[Math.floor(Math.random() * filters.length)];
+    currentFilter = randomFilter;
+
+    // 2. Add Text
+    if (addText) {
+        const captions = [
+            "Living the dream ✨", "Weekend vibes 🌴", "Just me 📸",
+            "Captured moments 🕰️", "Golden hour ☀️", "Tech & Love 💖"
+        ];
+        const randomCaption = captions[Math.floor(Math.random() * captions.length)];
+
+        const textSpan = document.createElement('div');
+        textSpan.contentEditable = true;
+        textSpan.className = `drag-text-item font-modern`;
+        textSpan.style.color = '#fff';
+        textSpan.innerText = randomCaption;
+        textSpan.style.left = '50%';
+        textSpan.style.top = '80%';
+        textSpan.style.transform = 'translate(-50%, -50%)';
+        textSpan.style.textShadow = '0 2px 10px rgba(0,0,0,0.5)';
+
+        textSpan.onclick = (e) => {
+            e.stopPropagation();
+            activeTextElement = textSpan;
+            if (textControls) textControls.style.display = 'flex';
+        };
+
+        textLayer.innerHTML = '';
+        textLayer.appendChild(textSpan);
+        enableDrag(textSpan);
+    } else {
+        textLayer.innerHTML = '';
+    }
+
+    goToEditor(true);
+}
+
+function goToEditor(applyFilterUI = false) {
+    capturedImage.src = canvasElement.toDataURL('image/jpeg', 0.9);
+    cameraInterface.style.display = 'none';
+    storyEditor.style.display = 'flex';
+
+    const filterClass = `filter-${currentFilter}`;
+    capturedImage.className = 'preview-img';
+    if (currentFilter !== 'none') capturedImage.classList.add(filterClass);
+
+    if (applyFilterUI) {
+        filterBtns.forEach(b => {
+            b.classList.remove('active');
+            if (b.getAttribute('data-filter') === currentFilter) b.classList.add('active');
+        });
+    }
+
+    // Add Effects based on filter
+    const editorPreview = document.getElementById('editor-preview-container');
+    const oldEffects = editorPreview.querySelectorAll('.dynamic-effect-overlay');
+    oldEffects.forEach(e => e.remove());
+
+    if (currentFilter === 'vintage' || currentFilter === 'noir') {
+        const grain = document.createElement('div');
+        grain.className = 'effect-grain-overlay dynamic-effect-overlay';
+        editorPreview.appendChild(grain);
+    }
+    if (currentFilter === 'warm') {
+        const glow = document.createElement('div');
+        glow.className = 'effect-warm-overlay dynamic-effect-overlay';
+        editorPreview.appendChild(glow);
+    }
+    if (currentFilter === 'vintage') {
+        const sparkle = document.createElement('div');
+        sparkle.className = 'effect-sparkle-overlay dynamic-effect-overlay';
+        editorPreview.appendChild(sparkle);
+    }
+}
+
 
 // 5. Editor Logic - Text & Overlay
 
@@ -1859,12 +2009,68 @@ function enableDrag(el) {
     window.addEventListener('touchend', end);
 }
 
+// --- CHAT CAMERA LOGIC ---
+
+let activeCameraMode = 'story'; // 'story' or 'chat'
+let isViewOnce = false;
+
+const chatCameraBtn = document.getElementById('chat-camera-btn');
+const viewOnceBtn = document.getElementById('view-once-btn');
+const sendBtnText = document.getElementById('send-btn-text');
+
+if (chatCameraBtn) {
+    chatCameraBtn.addEventListener('click', () => {
+        openCameraInMode('chat');
+    });
+}
+
+function openCameraInMode(mode) {
+    activeCameraMode = mode;
+
+    // Switch Tabs visually if needed, though we are hijacking the view
+    // Just show the camera interface
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('create').classList.add('active'); // Camera Section
+
+    // Customize UI based on mode
+    const title = document.getElementById('camera-title');
+    if (title) title.innerText = (mode === 'chat') ? 'Send Photo' : 'New Story';
+
+    startCamera();
+}
+
+// Toggle View Once
+if (viewOnceBtn) {
+    viewOnceBtn.addEventListener('click', () => {
+        isViewOnce = !isViewOnce;
+        if (isViewOnce) {
+            viewOnceBtn.classList.add('active');
+        } else {
+            viewOnceBtn.classList.remove('active');
+        }
+    });
+}
+
+// Update Editor UI based on mode
+function updateEditorStateForMode() {
+    if (activeCameraMode === 'chat') {
+        if (viewOnceBtn) viewOnceBtn.style.display = 'block';
+        if (sendBtnText) sendBtnText.innerText = 'Send';
+        isViewOnce = false;
+        if (viewOnceBtn) viewOnceBtn.classList.remove('active');
+    } else {
+        if (viewOnceBtn) viewOnceBtn.style.display = 'none';
+        if (sendBtnText) sendBtnText.innerText = 'Share';
+    }
+}
+
 // 6. Close / Retake
 if (closeEditorBtn) {
     closeEditorBtn.addEventListener('click', () => {
         storyEditor.style.display = 'none';
         cameraInterface.style.display = 'flex';
-        // Restart camera if stopped? (It was handling this via observer, but let's be sure)
+        // If we were in chat mode and cancel, maybe go back to chat?
+        // simple behavior: just go back to camera for now.
         startCamera();
     });
 }
@@ -1916,9 +2122,6 @@ if (sendStoryBtn) {
                 ctx.textAlign = 'left'; // Simplifies drawing at rect corner
                 ctx.textBaseline = 'top';
 
-                // Padding adjustment (visual vs actual)
-                // We'll draw at relative positions
-
                 // Neon Glow support for canvas
                 if (node.classList.contains('font-neon')) {
                     ctx.shadowColor = color;
@@ -1933,33 +2136,48 @@ if (sendStoryBtn) {
             // 3. Final Blob
             const finalImage = canvasElement.toDataURL('image/jpeg', 0.85);
 
-            const newStory = {
-                id: Date.now(), // timestamp ID
-                author: currentUser,
-                imageUrl: finalImage,
-                text: storyCaptionInput.value || "",
-                filter: currentFilter,
-                timestamp: Date.now()
-            };
+            if (activeCameraMode === 'chat') {
+                // SEND TO CHAT
+                sendChatContent(finalImage, 'image', isViewOnce);
 
-            // Use SyncManager
-            if (window.SyncManager) {
-                SyncManager.addStory(newStory);
+                // Return to Chat View
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.getElementById('chat').classList.add('active'); // Chat Section
+                stopCamera();
+                // Reset State
+                storyEditor.style.display = 'none';
+                cameraInterface.style.display = 'flex';
+
             } else {
-                // Fallback
-                const stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
-                stories.push(newStory);
-                localStorage.setItem('kingdom_stories', JSON.stringify(stories));
+                // SEND TO STORY (Existing Logic)
+                const newStory = {
+                    id: Date.now(),
+                    author: currentUser,
+                    imageUrl: finalImage,
+                    text: storyCaptionInput.value || "",
+                    filter: currentFilter,
+                    timestamp: Date.now()
+                };
+
+                // Use SyncManager
+                if (window.SyncManager) {
+                    SyncManager.addStory(newStory);
+                } else {
+                    const stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
+                    stories.push(newStory);
+                    localStorage.setItem('kingdom_stories', JSON.stringify(stories));
+                }
+
+                // Cleanup & Navigate Home
+                storyEditor.style.display = 'none';
+                cameraInterface.style.display = 'flex';
+                if (storyCaptionInput) storyCaptionInput.value = '';
+
                 renderStatusRings();
+
+                const homeTab = document.querySelector('[data-tab="home"]');
+                if (homeTab) homeTab.click();
             }
-
-            // UI Reset
-            storyEditor.style.display = 'none';
-            cameraInterface.style.display = 'flex';
-
-            // Go Home
-            const homeTab = document.querySelector('[data-tab="home"]');
-            if (homeTab) homeTab.click();
         };
     });
-}
+
