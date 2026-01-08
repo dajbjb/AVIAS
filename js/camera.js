@@ -60,8 +60,11 @@ window.startCamera = async function () {
         vidEl.srcObject = stream;
         await vidEl.play();
 
-        // Apply Flash if needed (Torches only work on back camera usually)
+        // Apply Flash if needed
         applyTorch();
+
+        // Re-apply current filter (restarts AR if needed)
+        applyFilterToVideo(currentFilter);
 
     } catch (err) { console.warn("Camera start failed:", err); }
 };
@@ -90,7 +93,6 @@ if (flashBtn) {
 function applyTorch() {
     if (kingdomCameraStream) {
         const track = kingdomCameraStream.getVideoTracks()[0];
-        // Note: 'torch' is not supported on all browsers/devices
         const capabilities = track.getCapabilities();
         if (capabilities.torch) {
             track.applyConstraints({ advanced: [{ torch: isFlashOn }] })
@@ -118,65 +120,328 @@ if (flipBtn) {
     });
 }
 
-// 3. Carousel Logic maintained below specifically for Level 3 AR
-
 // 3. Carousel Logic (Snap Detection - Level 3 AR Only)
-if (filterCarousel) {
-    filterCarousel.addEventListener('scroll', () => {
-        const center = filterCarousel.scrollLeft + (filterCarousel.offsetWidth / 2);
+const filterTrack = document.getElementById('filter-track'); // Inner track
+if (filterTrack) {
+    let scrollTimeout;
+    filterTrack.addEventListener('scroll', () => {
+        if (scrollTimeout) clearTimeout(scrollTimeout);
+
+        // Debounce slightly for performance but update visual class immediately if possible
+        const center = filterTrack.scrollLeft + (filterTrack.offsetWidth / 2);
         const bubbles = document.querySelectorAll('.filter-bubble');
+
+        let closest = null;
+        let minDist = Infinity;
+
         bubbles.forEach(bubble => {
             const bubbleCenter = bubble.offsetLeft + (bubble.offsetWidth / 2);
-            if (Math.abs(center - bubbleCenter) < 30) {
-                if (!bubble.classList.contains('active')) {
-                    document.querySelectorAll('.filter-bubble.active').forEach(b => b.classList.remove('active'));
-                    bubble.classList.add('active');
-                    console.log("AR Mode Selected:", bubble.getAttribute('data-filter'));
-                }
+            const dist = Math.abs(center - bubbleCenter);
+            if (dist < minDist) {
+                minDist = dist;
+                closest = bubble;
+            }
+
+            // Add click listener if missing (simple check)
+            if (!bubble.hasAttribute('data-click-bound')) {
+                bubble.setAttribute('data-click-bound', 'true');
+                bubble.addEventListener('click', () => {
+                    bubble.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                });
             }
         });
-    });
-}
 
-// 4. Level 2 Filter Capsule Logic
-const capsule = document.getElementById('level2-capsule');
-const capsuleLabel = document.getElementById('capsule-label');
-const capsuleItems = document.querySelectorAll('.capsule-item');
+        if (closest && !closest.classList.contains('active')) {
+            // Visual Update
+            document.querySelectorAll('.filter-bubble.active').forEach(b => b.classList.remove('active'));
+            closest.classList.add('active');
 
-if (capsule) {
-    capsule.addEventListener('click', (e) => {
-        if (capsule.classList.contains('expanded')) {
-            if (!e.target.classList.contains('capsule-item')) capsule.classList.remove('expanded');
-        } else {
-            capsule.classList.add('expanded');
+            // Logic Update
+            const filterName = closest.getAttribute('data-filter');
+            // We want to apply this filter, but we need to ensure we don't conflict with Level 2 filters
+            if (currentFilter !== filterName) {
+                currentFilter = filterName;
+                applyFilterToVideo(currentFilter);
+                if (filterNameLabel) filterNameLabel.innerText = closest.getAttribute('data-name');
+                if (window.navigator.vibrate) window.navigator.vibrate(5);
+            }
         }
     });
-
-    capsuleItems.forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.stopPropagation();
-            capsuleItems.forEach(i => i.classList.remove('active'));
-            item.classList.add('active');
-
-            const filterName = item.getAttribute('data-filter');
-            currentFilter = filterName;
-
-            if (capsuleLabel) capsuleLabel.textContent = item.textContent;
-            applyFilterToVideo(currentFilter);
-            capsule.classList.remove('expanded');
-        });
-    });
 }
 
+// 4. Nav Filter Buttons Logic (Replaces Capsule)
+const navFilterItems = document.querySelectorAll('.nav-filter-item');
+
+navFilterItems.forEach(item => {
+    item.addEventListener('click', (e) => {
+        // Visual active state
+        navFilterItems.forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+
+        // Logic
+        const filterName = item.getAttribute('data-filter');
+        currentFilter = filterName;
+        applyFilterToVideo(currentFilter);
+
+        // Optional: haptic feedback
+        if (window.navigator.vibrate) window.navigator.vibrate(5);
+    });
+});
+
+// --- AR FACE TRACKING (Level 3 - Robust) ---
+let isARLoaded = false;
+let isARLoading = false;
+const arCanvas = document.getElementById('ar-overlay');
+const arDebug = document.getElementById('ar-debug-overlay'); // Debug
+let arLoopId = null;
+
+// Better CDN for models
+const AR_MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+
+function updateDebug(msg) {
+    if (arDebug) arDebug.innerText = `F: ${currentFilter} | ${msg}`;
+    console.log(msg);
+}
+
+async function loadFaceApiModels() {
+    if (isARLoaded || isARLoading) return;
+    try {
+        isARLoading = true;
+        updateDebug("Loading Models...");
+        if (captureBtn) captureBtn.style.borderColor = 'red';
+
+        // Load Tiny Face Detector & Landmarks
+        await faceapi.nets.tinyFaceDetector.loadFromUri(AR_MODEL_URL);
+        await faceapi.nets.faceLandmarks68Net.loadFromUri(AR_MODEL_URL);
+
+        isARLoaded = true;
+        isARLoading = false;
+        updateDebug("Models Loaded! Ready.");
+        if (captureBtn) captureBtn.style.borderColor = 'rgba(255, 255, 255, 0.6)';
+
+        // Retry tracking if a filter was selected while loading
+        if (['bunny', 'glasses'].includes(currentFilter) && kingdomCameraStream) {
+            startARTracking();
+        }
+    } catch (e) {
+        updateDebug("Error Loading Models: " + e.message);
+        isARLoading = false;
+        if (captureBtn) captureBtn.style.borderColor = 'orange';
+    }
+}
+
+// Start loading immediately on app start
+loadFaceApiModels();
+
+function startARTracking() {
+    // If not loaded yet, try to load (if not loading) and return.
+    if (!isARLoaded) {
+        if (!isARLoading) loadFaceApiModels();
+        updateDebug("Wait for models...");
+        return;
+    }
+
+    if (!videoElement || !arCanvas || !kingdomCameraStream) {
+        updateDebug("Err: Missing Video/Canvas");
+        return;
+    }
+
+    // Get video dimensions (visual)
+    const displaySize = {
+        width: videoElement.videoWidth,
+        height: videoElement.videoHeight
+    };
+
+    if (displaySize.width === 0) {
+        updateDebug("Video warming up...");
+        requestAnimationFrame(startARTracking);
+        return;
+    }
+
+    // Sync canvas size
+    faceapi.matchDimensions(arCanvas, displaySize);
+
+    // Stop any existing loop
+    if (arLoopId) cancelAnimationFrame(arLoopId);
+
+    // Context for AR
+    const ctx = arCanvas.getContext('2d');
+    updateDebug("Tracking Started...");
+
+    async function step() {
+        if (!kingdomCameraStream || videoElement.paused || videoElement.ended) {
+            arLoopId = requestAnimationFrame(step);
+            return;
+        }
+
+        // Detect Face
+        // Use TinyFaceDetector for speed on mobile
+        const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.3 });
+        const detection = await faceapi.detectSingleFace(videoElement, options).withFaceLandmarks();
+
+        // Clear Canvas
+        ctx.clearRect(0, 0, arCanvas.width, arCanvas.height);
+        ctx.save();
+
+        // Handle Mirroring
+        if (currentFacingMode === 'user') {
+            ctx.translate(arCanvas.width, 0);
+            ctx.scale(-1, 1);
+        }
+
+        if (detection) {
+            updateDebug(`Face Detected! Score: ${Math.round(detection.detection.score * 100)}%`);
+            const resizedDetections = faceapi.resizeResults(detection, displaySize);
+            const landmarks = resizedDetections.landmarks;
+
+            // --- DEBUG: DRAW BOX ---
+            // Draw a simple box to confirm detection is working
+            const box = resizedDetections.detection.box;
+            ctx.strokeStyle = 'lime';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(box.x, box.y, box.width, box.height);
+            // -----------------------
+
+            // Draw Effects
+            if (currentFilter === 'bunny') drawBunnyEars(ctx, landmarks);
+            else if (currentFilter === 'glasses') drawCoolGlasses(ctx, landmarks);
+        } else {
+            updateDebug("Searching for face...");
+        }
+
+        ctx.restore();
+        arLoopId = requestAnimationFrame(step);
+    }
+    step();
+}
+
+function stopARTracking() {
+    if (arLoopId) cancelAnimationFrame(arLoopId);
+    arLoopId = null;
+    if (arCanvas) {
+        const ctx = arCanvas.getContext('2d');
+        ctx.clearRect(0, 0, arCanvas.width, arCanvas.height);
+    }
+    updateDebug("AR Stopped");
+}
+
+// --- AR DRAWING FUNCTIONS ---
+function drawBunnyEars(ctx, landmarks) {
+    const leftEye = landmarks.getLeftEye();
+    const rightEye = landmarks.getRightEye();
+    const nose = landmarks.getNose();
+
+    // Centers
+    const leftX = leftEye[0].x;
+    const rightX = rightEye[3].x;
+
+    // Calculate Head Width approximate
+    const width = (rightX - leftX) * 2.5;
+    const midX = (leftX + rightX) / 2;
+    // Estimate top of head
+    // Distance between eyes
+    const eyeDist = Math.abs(rightX - leftX);
+    const topY = leftEye[0].y - (eyeDist * 2.0);
+
+    ctx.save();
+    ctx.translate(midX, topY);
+
+    // Draw Ears (Pink & White)
+    // Left Ear
+    ctx.rotate(-0.2);
+    drawEar(ctx, -width * 0.25, 0, width * 0.15, width * 0.5);
+    ctx.rotate(0.2); // reset
+
+    // Right Ear
+    ctx.rotate(0.2);
+    drawEar(ctx, width * 0.25, 0, width * 0.15, width * 0.5);
+    ctx.rotate(-0.2);
+
+    ctx.restore();
+}
+
+function drawEar(ctx, x, y, w, h) {
+    ctx.fillStyle = '#ffc0cb'; // Pink
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+    ctx.ellipse(x, y - h / 2, w, h, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Inner ear
+    ctx.fillStyle = '#ff69b4'; // Hot Pink
+    ctx.beginPath();
+    ctx.ellipse(x, y - h / 2 + h * 0.2, w * 0.6, h * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+
+function drawCoolGlasses(ctx, landmarks) {
+    const leftEye = landmarks.getLeftEye();
+    const rightEye = landmarks.getRightEye();
+
+    // Centers
+    const lCx = (leftEye[0].x + leftEye[3].x) / 2;
+    const lCy = (leftEye[0].y + leftEye[1].y) / 2;
+    const rCx = (rightEye[0].x + rightEye[3].x) / 2;
+    const rCy = (rightEye[0].y + rightEye[1].y) / 2;
+
+    const midX = (lCx + rCx) / 2;
+    const midY = (lCy + rCy) / 2;
+
+    const width = Math.sqrt(Math.pow(rCx - lCx, 2) + Math.pow(rCy - lCy, 2)) * 2.5;
+    const angle = Math.atan2(rCy - lCy, rCx - lCx);
+
+    ctx.save();
+    ctx.translate(midX, midY);
+    ctx.rotate(angle);
+
+    // Draw Glasses (Black Blocky Style)
+    const gH = width * 0.4;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.9)';
+
+    // Left Lens
+    ctx.fillRect(-width / 2, -gH / 2, width / 2.1, gH);
+    // Right Lens
+    ctx.fillRect(width / 2 - width / 2.1, -gH / 2, width / 2.1, gH);
+    // Bridge
+    ctx.fillRect(-width / 10, -gH / 4, width / 5, gH / 5);
+
+    // Shine effect
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.beginPath();
+    ctx.moveTo(-width / 2.5, -gH / 3);
+    ctx.lineTo(-width / 3, -gH / 1.5);
+    ctx.lineTo(-width / 3.5, -gH / 3);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+// Updated Apply Filter Logic
 function applyFilterToVideo(filterName) {
     if (!videoElement) return;
+
+    // Reset CSS filters always
     videoElement.style.filter = 'none';
+
+    // CSS Filters
     if (filterName === 'vintage') videoElement.style.filter = 'sepia(0.5) contrast(1.2)';
     else if (filterName === 'noir') videoElement.style.filter = 'grayscale(1) contrast(1.5)';
     else if (filterName === 'warm') videoElement.style.filter = 'saturate(1.5) sepia(0.2)';
     else if (filterName === 'cold') videoElement.style.filter = 'hue-rotate(180deg) saturate(0.5)';
     else if (filterName === 'drama') videoElement.style.filter = 'contrast(1.3) grayscale(0.5)';
     else if (filterName === 'cinema') videoElement.style.filter = 'contrast(1.1) brightness(0.9) saturate(1.2)';
+
+    // Trigger AR only if needed
+    if (['bunny', 'glasses'].includes(filterName)) {
+        startARTracking();
+    } else {
+        stopARTracking();
+    }
 }
 
 
@@ -227,10 +492,51 @@ function performCapture() {
     else if (currentFilter === 'cinema') ctx.filter = 'contrast(1.1) brightness(0.9) saturate(1.2)';
     else ctx.filter = 'none';
 
-    // Note: If AR (Level 3) is active, we might need to grab the WebGL canvas instead.
-    // calculate aspect ratio to crop if needed (optional)
-
     ctx.drawImage(videoElement, 0, 0, width, height);
+
+    // Draw AR Overlay on top of captured image if active
+    if (['bunny', 'glasses'].includes(currentFilter) && arCanvas) {
+        // Reset filter for overlay draw
+        ctx.filter = 'none';
+        // We need to draw the AR canvas content onto the capture canvas
+        // BUT arCanvas might be different size (visual) vs capture canvas (source)
+        // So we draw simple image scaling
+
+        // Mirroring context is already applied if user mode!
+        // If arCanvas was already mirrored in its own context, drawing it as an image...
+        // Actually, arCanvas is just pixels. If we draw it, it will be drawn transformed.
+        // Let's check:
+        // If context is scaled (-1, 1), and we drawImage(arCanvas), it mirrors the AR canvas.
+        // AR canvas itself was drawn with mirror if user mode.
+        // So mirror * mirror = normal?
+        // Wait. arCanvas context was 'transformed' during drawing, but pixels are stored normally?
+        // No, canvas drawing operations rasterize immediately.
+
+        // If I drew to arCanvas with scale(-1, 1), the pixels are flipped on the canvas surface.
+        // If I then draw that canvas to another canvas that is ALSO scaled (-1, 1), it will flip again -> Normal.
+        // Correct.
+
+        // So if user mode:
+        // Capture Context has scale(-1, 1).
+        // We should un-scale before drawing the AR overlay?
+        // OR, simpler:
+        // AR Canvas pixels match what the user Sees.
+        // Capture Canvas pixels match what the user Sees.
+
+        // Since capture context is flipped to fix the webcam feed (which is raw),
+        // And AR canvas is ALREADY visual (flipped),
+        // We should probably restore context state, draw AR, then re-flip?
+        // Or just draw AR without flip?
+
+        ctx.save();
+        if (currentFacingMode === 'user') {
+            // Reset transform to draw AR overlay as-is (since it matches visual)
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+        }
+        ctx.drawImage(arCanvas, 0, 0, width, height); // Scale to fit
+        ctx.restore();
+    }
+
     ctx.filter = 'none'; // Reset
 
     // Transition
@@ -246,9 +552,6 @@ function performCapture() {
 function goToEditor() {
     updateEditorStateForMode();
     if (capturedImage && canvasElement) capturedImage.src = canvasElement.toDataURL('image/jpeg', 0.9);
-
-    // Manual Filter class application for preview (redundant if burned in, but safe)
-    // if (capturedImage) capturedImage.className = 'preview-img'; // Reset filters as they are burned in canvas now
 
     if (cameraInterface) cameraInterface.style.display = 'none';
     if (storyEditor) storyEditor.style.display = 'flex';
