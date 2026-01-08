@@ -77,7 +77,12 @@ const SyncManager = {
         // Fire & Forget - Firestore handles sync
         // Add status: 'sent' initially
         msg.status = 'sent';
-        db.collection(this.CHAT_COLLECTION).add(msg);
+        db.collection(this.CHAT_COLLECTION).add(msg)
+            .then(() => console.log("Message sent to cloud"))
+            .catch((error) => {
+                console.error("Error sending message: ", error);
+                alert("Error sending message. Check internet connection.");
+            });
     },
 
     markMessagesAsRead: function (otherUser) {
@@ -1201,6 +1206,11 @@ function scrollToBottom() {
 function sendMessage() {
     const text = chatInput.value.trim();
     if (!text) return;
+
+    // Disable momentarily to prevent double send
+    chatSendBtn.disabled = true;
+    setTimeout(() => chatSendBtn.disabled = false, 500);
+
     sendChatContent(text, 'text');
     chatInput.value = '';
 }
