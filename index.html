@@ -181,22 +181,7 @@
                     </div>
 
                     <div class="camera-controls">
-                        <!-- JS Camera Capture -->
-                        <div class="capture-ring" id="capture-btn">
-                            <div class="capture-inner"></div>
-                        </div>
-
-                        <!-- Fallback for Mobile/Non-Secure Context -->
-                        <div id="mobile-camera-fallback" style="display: none; text-align: center; margin-top: 10px;">
-                            <label for="camera-file-input" class="editor-btn secondary"
-                                style="background: rgba(255,255,255,0.2);">
-                                <i class="fa-solid fa-camera"></i> Open Camera App
-                            </label>
-                            <input type="file" id="camera-file-input" accept="image/*" capture="user"
-                                style="display: none;">
-                        </div>
-                    </div>
-                    <div class="camera-controls">
+                        <!-- Filters -->
                         <div class="filters-container">
                             <button class="filter-btn active" data-filter="none">Normal</button>
                             <button class="filter-btn" data-filter="vintage">Vintage</button>
@@ -204,10 +189,25 @@
                             <button class="filter-btn" data-filter="warm">Warm</button>
                         </div>
 
+                        <!-- Main Capture Button -->
                         <div class="capture-row">
                             <button id="capture-btn" class="capture-ring">
                                 <div class="capture-inner"></div>
                             </button>
+                        </div>
+
+                        <!-- Mobile Fallback (Hidden by default, shown via JS if needed) -->
+                        <div id="mobile-fallback-container" style="display:none; margin-top: 15px; text-align: center;">
+                            <button id="start-camera-manual" class="editor-btn secondary"
+                                style="background: rgba(0,0,0,0.5); backdrop-filter: blur(5px);">
+                                <i class="fa-solid fa-camera"></i> Start Camera
+                            </button>
+                            <label for="camera-file-input" class="editor-btn secondary"
+                                style="background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); margin-left: 10px;">
+                                <i class="fa-solid fa-upload"></i> Upload
+                            </label>
+                            <input type="file" id="camera-file-input" accept="image/*" capture="user"
+                                style="display: none;">
                         </div>
                     </div>
                 </div>
