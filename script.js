@@ -245,8 +245,7 @@ const SyncManager = {
     }
 };
 
-// Start Sync
-SyncManager.init();
+// Start Sync moved to end of file to prevent ReferenceError
 /**
  * Navigation Logic
  */
@@ -1329,6 +1328,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof renderMemories === 'function') renderMemories();
     if (typeof renderHomeHighlights === 'function') renderHomeHighlights();
     initWheel();
+    SyncManager.init(); // Start Sync safely after DOM load
 });
 
 /**
