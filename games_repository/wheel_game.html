@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ultimate Kingdom Wheel</title>
+    <!-- Premium Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;700;900&family=Playfair+Display:ital,wght@1,700&display=swap"
+        rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="wheel_engine.css">
+</head>
+
+<body>
+
+    <!-- Ambient Background Layer -->
+    <div class="ambient-layer">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
+    <!-- Main Engine Container -->
+    <div class="engine-container">
+
+        <!-- Header -->
+        <header class="engine-header">
+            <h1 class="logo-text">KINGDOM<span class="sub-logo">CHRONOS</span></h1>
+            <div class="status-indicator" id="engine-status">
+                <span class="state-dot"></span> <span id="status-label">SYSTEM READY</span>
+            </div>
+        </header>
+
+        <!-- The Stage -->
+        <main class="wheel-stage">
+
+            <!-- Wheel Wrapper for Layers -->
+            <div class="wheel-assemblage">
+                <!-- Drop Shadow Layer -->
+                <div class="shadow-plate"></div>
+
+                <!-- Main Canvas (Hardware Accelerated) -->
+                <canvas id="wheel-canvas"></canvas>
+
+                <!-- The Physical Stopper (HTML Overlay) -->
+                <div class="stopper-mechanism">
+                    <div class="needle" id="needle">
+                        <div class="needle-tip"></div>
+                        <div class="needle-body"></div>
+                        <div class="needle-accent"></div>
+                    </div>
+                </div>
+
+                <!-- Center Hub (Platinum Finish) -->
+                <div class="center-hub">
+                    <div class="hub-knob">
+                        <i class="fa-solid fa-crown"></i>
+                    </div>
+                    <div class="hub-shine"></div>
+                </div>
+            </div>
+
+            <!-- Spin Trigger System -->
+            <button id="spin-trigger" class="spin-trigger-btn">
+                <span class="btn-text">INITIATE</span>
+                <span class="btn-glow"></span>
+            </button>
+
+        </main>
+
+        <!-- Dynamic Configuration Panel -->
+        <div class="config-panel glass-panel" id="config-panel">
+            <div class="panel-header">
+                <h3><i class="fa-solid fa-sliders"></i> Smart Config</h3>
+                <button class="minimize-btn" id="toggle-config"><i class="fa-solid fa-chevron-down"></i></button>
+            </div>
+
+            <div class="panel-content">
+                <!-- Container for dynamic input rows -->
+                <div class="segments-list-container" id="segments-container">
+                    <!-- Dynamic Inputs will be injected here via JS -->
+                </div>
+
+                <div class="action-row">
+                    <button id="add-segment-btn" class="icon-action-btn"><i class="fa-solid fa-plus"></i> Add
+                        Item</button>
+                    <button id="update-wheel" class="secondary-btn">Update Wheel</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Result Modal (Victory State) -->
+    <div id="victory-modal" class="victory-modal">
+        <canvas id="particle-canvas"></canvas> <!-- Particle System Layer -->
+
+        <div class="victory-card glass-panel">
+            <h2 class="victory-eyebrow">DESTINY CHOSE</h2>
+            <h1 id="victory-text" class="victory-title">SAMPLE</h1>
+            <p class="victory-desc">The stars have aligned for this moment.</p>
+
+            <button id="claim-btn" class="claim-btn">ACCEPT FATE</button>
+        </div>
+    </div>
+
+    <script src="wheel_engine.js"></script>
+</body>
+
+</html>
