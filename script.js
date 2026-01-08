@@ -449,9 +449,14 @@ navItems.forEach(item => {
                     if (other.id !== target) other.classList.remove('active');
                 });
 
-                // STOP CAMERA EXPLICITLY if not on create tab
-                if (target !== 'create' && typeof stopCamera === 'function') {
-                    stopCamera();
+                // CAMERA MANAGEMENT
+                if (target === 'create') {
+                    // Wait for transition end slightly to avoid lag
+                    setTimeout(() => {
+                        if (typeof startCamera === 'function') startCamera();
+                    }, 300);
+                } else {
+                    if (typeof stopCamera === 'function') stopCamera();
                 }
 
                 // Show this one
@@ -1497,12 +1502,8 @@ function sendChatContent(content, type, viewOnce = false) {
         timestamp: Date.now()
     };
 
-    // Update Local Instance directly for speed before SyncManager saves
-    chatHistory.push(newMessage);
-    SyncManager.saveData(chatHistory);
-    renderChat();
-
-
+    // Use SyncManager for Hybrid Sync (Local + Cloud)
+    SyncManager.sendChat(newMessage);
 
     chatInput.value = '';
 
@@ -1515,6 +1516,41 @@ function sendChatContent(content, type, viewOnce = false) {
     // Reset typing status on send
     updateTypingStatus(currentUser, false);
 }
+
+// Global View Image Function
+window.viewChatImage = function (msgId) {
+    const msg = chatHistory.find(m => m.id == msgId);
+    if (!msg) return;
+
+    const currentUser = localStorage.getItem('kingdom_current_user') || 'Aviya';
+
+    if (msg.viewOnce) {
+        // Check if I viewed it
+        const viewedByMe = msg.viewedBy && msg.viewedBy.includes(currentUser);
+
+        if (viewedByMe) return; // Already viewed
+
+        // Mark as viewed
+        if (!msg.viewedBy) msg.viewedBy = [];
+        msg.viewedBy.push(currentUser);
+
+        // Save
+        SyncManager.saveData(chatHistory);
+        renderChat(); // Update UI to "Opened"
+    }
+
+    const modal = document.getElementById('chat-image-modal');
+    const modalImg = document.getElementById('modal-image');
+    if (modal && modalImg) {
+        modalImg.src = msg.text;
+        modal.style.display = 'flex';
+    }
+};
+
+window.closeChatImage = function () {
+    const modal = document.getElementById('chat-image-modal');
+    if (modal) modal.style.display = 'none';
+};
 
 // GIF Picker Logic
 const gifBtn = document.getElementById('chat-gif-btn');
@@ -1837,6 +1873,8 @@ function applyAIEdit(addText) {
 }
 
 function goToEditor(applyFilterUI = false) {
+    updateEditorStateForMode(); // Ensure UI is correct for context
+
     capturedImage.src = canvasElement.toDataURL('image/jpeg', 0.9);
     cameraInterface.style.display = 'none';
     storyEditor.style.display = 'flex';
@@ -2181,3 +2219,133 @@ if (sendStoryBtn) {
         };
     });
 
+
+}
+
+// --- CRITICAL FIX: ROBUST CAMERA HANDLING ---
+// This handles the "Constant Permission" bug by tracking state.
+
+let kingdomCameraStream = null;
+
+window.startCamera = async function () {
+    // 1. Check if already running
+    if (kingdomCameraStream && kingdomCameraStream.active) {
+        console.log("Camera already active. Skipping request.");
+        // Ensure video element has it
+        if (videoElement && !videoElement.srcObject) {
+            videoElement.srcObject = kingdomCameraStream;
+            videoElement.play().catch(e => console.log(e));
+        }
+        return;
+    }
+
+    // 2. Cleanup old zombies
+    if (videoElement && videoElement.srcObject) {
+        try {
+            videoElement.srcObject.getTracks().forEach(t => t.stop());
+        } catch (e) { }
+    }
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user' },
+            audio: false
+        });
+
+        kingdomCameraStream = stream;
+        if (videoElement) {
+            videoElement.srcObject = stream;
+            await videoElement.play();
+        }
+        console.log("Camera started successfully.");
+    } catch (err) {
+        console.error("Camera denied or error:", err);
+        // Do not alert constantly if denied, just log
+    }
+};
+
+window.stopCamera = function () {
+    if (kingdomCameraStream) {
+        kingdomCameraStream.getTracks().forEach(track => track.stop());
+        kingdomCameraStream = null;
+    }
+    if (videoElement && videoElement.srcObject) {
+        try {
+            videoElement.srcObject.getTracks().forEach(t => t.stop());
+        } catch (e) { }
+        videoElement.srcObject = null;
+    }
+    console.log("Camera stopped completely.");
+};
+
+// --- CRITICAL SYNC FIXES ---
+// Overriding SyncManager methods to be robust
+
+SyncManager.init = function () {
+    console.log("Restarting Hybrid Sync (Robust Mode)...");
+
+    // Remove old indicator
+    const old = document.getElementById('cloud-status');
+    if (old) old.remove();
+
+    this.createStatusIndicator();
+    this.updateStatus(false);
+
+    // Load Local
+    this.loadLocalBackup();
+
+    // Check DB
+    if (typeof db === 'undefined' || !db) {
+        console.error("Firebase DB missing!");
+        alert("Database Error: Check Internet");
+        return;
+    }
+
+    // Start Listeners
+    this.listenToChats();
+    this.listenToStories();
+    this.listenToMemories();
+
+    // Watchdog
+    setTimeout(() => {
+        if (!this.isConnected) {
+            console.warn("Sync Watchdog: Connection Slow/Failed");
+            const el = document.getElementById('cloud-status');
+            if (el && el.style.background !== 'red') {
+                el.style.background = 'orange';
+            }
+        }
+    }, 5000);
+};
+
+SyncManager.createStatusIndicator = function () {
+    const div = document.createElement('div');
+    div.id = 'cloud-status';
+    div.style.cssText = "position:fixed; top:15px; left:15px; width:18px; height:18px; border-radius:50%; background:orange; z-index:9999; box-shadow: 0 0 8px rgba(0,0,0,0.8); cursor:pointer; border: 2px solid white; transition: background 0.3s;";
+    div.title = "Cloud Status";
+    document.body.appendChild(div);
+
+    div.onclick = () => {
+        const state = this.isConnected ? "CONNECTED (Green)" : "DISCONNECTED (Red/Orange)";
+        alert("Server Status: " + state + "\nLast Log: " + this.lastError);
+        if (!this.isConnected) window.location.reload();
+    };
+};
+
+SyncManager.updateStatus = function (online, errorMsg = null) {
+    this.isConnected = online;
+    const el = document.getElementById('cloud-status');
+    if (el) {
+        el.style.background = online ? '#00ff00' : (errorMsg ? 'red' : 'orange');
+        el.style.boxShadow = online ? '0 0 10px #00ff00' : 'none';
+    }
+    if (errorMsg) {
+        console.error("Sync Error:", errorMsg);
+        this.lastError = errorMsg;
+    } else if (online) {
+        this.lastError = "Connected OK: " + new Date().toLocaleTimeString();
+    }
+};
+
+// Restart Sync
+setTimeout(() => SyncManager.init(), 1000);
