@@ -1329,6 +1329,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof renderHomeHighlights === 'function') renderHomeHighlights();
     initWheel();
     SyncManager.init(); // Start Sync safely after DOM load
+
+    // Ensure viewStatus is globally available
+    window.viewStatus = viewStatus;
 });
 
 /**
@@ -1577,3 +1580,386 @@ if (chatTabBtn) {
     });
 }
 
+/**
+ * STORIES & CAMERA LOGIC - INSTAGRAM STYLE V2
+ */
+
+let currentFilter = 'none';
+
+// -- Editor State --
+let activeTextElement = null;
+let isDraggingText = false;
+let currentFont = 'classic';
+let currentColor = '#ffffff';
+
+// -- Elements --
+const cameraInterface = document.getElementById('camera-interface');
+const storyEditor = document.getElementById('story-editor');
+const videoElement = document.getElementById('camera-feed');
+const canvasElement = document.getElementById('camera-canvas');
+const capturedImage = document.getElementById('captured-image');
+const filterBtns = document.querySelectorAll('.filter-btn');
+const captureBtn = document.getElementById('capture-btn');
+
+// New Editor Elements
+const textLayer = document.getElementById('text-layer');
+const textControls = document.getElementById('text-controls');
+const toggleTextBtn = document.getElementById('toggle-text-mode');
+const closeEditorBtn = document.getElementById('close-editor');
+const storyCaptionInput = document.getElementById('story-caption'); // Bottom input
+const fontBtns = document.querySelectorAll('.font-btn');
+const colorDots = document.querySelectorAll('.color-dot');
+const sendStoryBtn = document.getElementById('send-story-btn');
+
+
+// 3. Filters Logic with Visual Effects
+if (filterBtns) {
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            filterBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            currentFilter = btn.getAttribute('data-filter');
+            const filterClass = `filter-${currentFilter}`;
+
+            // Reset Video Classes
+            if (videoElement) {
+                videoElement.className = '';
+                if (currentFilter !== 'none') videoElement.classList.add(filterClass);
+            }
+
+            // Manage Effect Overlays (Grain, Sparkles)
+            const parent = videoElement ? videoElement.parentNode : null;
+            if (parent) {
+                // Remove existing
+                const existing = parent.querySelectorAll('.dynamic-effect-overlay');
+                existing.forEach(e => e.remove());
+
+                // Add new based on filter
+                if (currentFilter === 'vintage' || currentFilter === 'noir') {
+                    const grain = document.createElement('div');
+                    grain.className = 'effect-grain-overlay dynamic-effect-overlay';
+                    parent.appendChild(grain);
+                }
+
+                if (currentFilter === 'warm') {
+                    const glow = document.createElement('div');
+                    glow.className = 'effect-warm-overlay dynamic-effect-overlay';
+                    parent.appendChild(glow);
+                }
+
+                // Add sparkles to Vintage for extra flair
+                if (currentFilter === 'vintage') {
+                    const sparkle = document.createElement('div');
+                    sparkle.className = 'effect-sparkle-overlay dynamic-effect-overlay';
+                    parent.appendChild(sparkle);
+                }
+            }
+
+            if (capturedImage) {
+                capturedImage.className = 'preview-img';
+                if (currentFilter !== 'none') capturedImage.classList.add(filterClass);
+            }
+        });
+    });
+}
+
+// 4. Capture Logic (Robust)
+if (captureBtn) {
+    captureBtn.addEventListener('click', () => {
+        if (!videoElement || !canvasElement) return;
+
+        // Ensure video is playing and has data
+        if (videoElement.readyState < 2) {
+            console.warn("Video not ready yet");
+            return;
+        }
+
+        const width = videoElement.videoWidth;
+        const height = videoElement.videoHeight;
+        canvasElement.width = width;
+        canvasElement.height = height;
+        const ctx = canvasElement.getContext('2d');
+
+        // Mirror check (if front camera)
+        // For simplicity in V2, we assume user facing and mirror
+        ctx.translate(width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(videoElement, 0, 0, width, height);
+
+        capturedImage.src = canvasElement.toDataURL('image/jpeg', 0.9);
+
+        // Reset Editor State
+        textLayer.innerHTML = '';
+        if (storyCaptionInput) storyCaptionInput.value = '';
+
+        cameraInterface.style.display = 'none';
+        storyEditor.style.display = 'flex';
+
+        // Apply current filter to preview image visually
+        capturedImage.className = 'preview-img';
+        if (currentFilter !== 'none') capturedImage.classList.add(`filter-${currentFilter}`);
+
+        // Add Effects to Editor Preview as well
+        const editorPreview = document.getElementById('editor-preview-container');
+        // Clear old effects
+        const oldEffects = editorPreview.querySelectorAll('.dynamic-effect-overlay');
+        oldEffects.forEach(e => e.remove());
+
+        // Add new
+        if (currentFilter === 'vintage' || currentFilter === 'noir') {
+            const grain = document.createElement('div');
+            grain.className = 'effect-grain-overlay dynamic-effect-overlay';
+            editorPreview.appendChild(grain);
+        }
+        if (currentFilter === 'warm') {
+            const glow = document.createElement('div');
+            glow.className = 'effect-warm-overlay dynamic-effect-overlay';
+            editorPreview.appendChild(glow);
+        }
+        if (currentFilter === 'vintage') {
+            const sparkle = document.createElement('div');
+            sparkle.className = 'effect-sparkle-overlay dynamic-effect-overlay';
+            editorPreview.appendChild(sparkle);
+        }
+    });
+}
+
+// 5. Editor Logic - Text & Overlay
+
+// 5.a Toggle Text Mode
+if (toggleTextBtn) {
+    toggleTextBtn.addEventListener('click', () => {
+        const textSpan = document.createElement('div');
+        textSpan.contentEditable = true;
+        textSpan.className = `drag-text-item font-${currentFont}`;
+        textSpan.style.color = currentColor;
+        textSpan.innerText = "Type here...";
+        textSpan.style.left = '50%';
+        textSpan.style.top = '50%';
+        textSpan.style.transform = 'translate(-50%, -50%)'; // Centering helper
+
+        // Ensure it doesn't trigger drag immediately
+        textSpan.onclick = (e) => {
+            e.stopPropagation();
+            textSpan.focus();
+            activeTextElement = textSpan;
+            if (textControls) textControls.style.display = 'flex';
+        };
+
+        textLayer.appendChild(textSpan);
+
+        textSpan.focus();
+        // Select all text
+        const range = document.createRange();
+        range.selectNodeContents(textSpan);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+        if (textControls) textControls.style.display = 'flex';
+        activeTextElement = textSpan;
+
+        enableDrag(textSpan);
+
+        textSpan.addEventListener('blur', () => {
+            setTimeout(() => {
+                if (document.activeElement !== textSpan && !textControls.contains(document.activeElement)) {
+                    if (textControls) textControls.style.display = 'none';
+                }
+            }, 200);
+        });
+    });
+}
+
+// 5.b Font Switching
+if (fontBtns) {
+    fontBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            fontBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentFont = btn.getAttribute('data-font');
+
+            if (activeTextElement) {
+                // Remove old font classes
+                activeTextElement.classList.remove('font-classic', 'font-modern', 'font-neon', 'font-hand');
+                activeTextElement.classList.add(`font-${currentFont}`);
+                activeTextElement.focus();
+            }
+        });
+    });
+}
+
+// 5.c Color Switching
+if (colorDots) {
+    colorDots.forEach(dot => {
+        dot.addEventListener('click', () => {
+            colorDots.forEach(d => d.classList.remove('active'));
+            dot.classList.add('active');
+            currentColor = dot.getAttribute('data-color');
+
+            if (activeTextElement) {
+                activeTextElement.style.color = currentColor;
+                activeTextElement.focus();
+            }
+        });
+    });
+}
+
+// 5.d Draggable Logic (Touch & Mouse)
+function enableDrag(el) {
+    let isDown = false;
+    let startX, startY;
+    // We modify transform translate values or top/left.
+    // Simpler to stick to top/left since we centered with translate(-50%, -50%) earlier.
+
+    // Actually, for smooth drag, let's use direct offset manipulation
+    let initialLeft, initialTop;
+
+    const start = (e) => {
+        // If editing text, don't drag
+        if (document.activeElement === el) return;
+
+        isDown = true;
+        activeTextElement = el;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        startX = clientX;
+        startY = clientY;
+
+        initialLeft = el.offsetLeft;
+        initialTop = el.offsetTop;
+    };
+
+    const move = (e) => {
+        if (!isDown) return;
+        e.preventDefault(); // Stop scrolling
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+
+        el.style.left = `${initialLeft + dx}px`;
+        el.style.top = `${initialTop + dy}px`;
+    };
+
+    const end = () => {
+        isDown = false;
+    };
+
+    el.addEventListener('mousedown', start);
+    el.addEventListener('touchstart', start);
+
+    window.addEventListener('mousemove', move);
+    window.addEventListener('touchmove', move, { passive: false });
+
+    window.addEventListener('mouseup', end);
+    window.addEventListener('touchend', end);
+}
+
+// 6. Close / Retake
+if (closeEditorBtn) {
+    closeEditorBtn.addEventListener('click', () => {
+        storyEditor.style.display = 'none';
+        cameraInterface.style.display = 'flex';
+        // Restart camera if stopped? (It was handling this via observer, but let's be sure)
+        startCamera();
+    });
+}
+
+// 7. Share Logic - Burn Text to Image
+if (sendStoryBtn) {
+    sendStoryBtn.addEventListener('click', () => {
+        const currentUser = localStorage.getItem('kingdom_current_user') || 'Aviya';
+
+        // Burn Text onto Canvas
+        const ctx = canvasElement.getContext('2d');
+        const img = new Image();
+        img.src = capturedImage.src;
+        img.onload = () => {
+            canvasElement.width = img.width;
+            canvasElement.height = img.height;
+
+            // Draw original photo
+            ctx.drawImage(img, 0, 0);
+
+            // Map text elements
+            const previewRect = document.getElementById('editor-preview-container').getBoundingClientRect();
+            // Scale factors
+            const scaleX = canvasElement.width / previewRect.width;
+            const scaleY = canvasElement.height / previewRect.height;
+
+            // 2. Burn Text
+            const textNodes = textLayer.children;
+            Array.from(textNodes).forEach(node => {
+                const nodeRect = node.getBoundingClientRect();
+
+                // Calculate position relative to container
+                const relativeLeft = (nodeRect.left - previewRect.left) * scaleX;
+                const relativeTop = (nodeRect.top - previewRect.top) * scaleY;
+
+                // Font Size Scaling
+                const computed = window.getComputedStyle(node);
+                const fontSize = parseFloat(computed.fontSize) * ((scaleX + scaleY) / 2);
+                const fontFamily = computed.fontFamily;
+                const color = computed.color;
+
+                // Weight
+                let fontWeight = computed.fontWeight;
+
+                ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+                ctx.fillStyle = color;
+
+                // Alignment
+                ctx.textAlign = 'left'; // Simplifies drawing at rect corner
+                ctx.textBaseline = 'top';
+
+                // Padding adjustment (visual vs actual)
+                // We'll draw at relative positions
+
+                // Neon Glow support for canvas
+                if (node.classList.contains('font-neon')) {
+                    ctx.shadowColor = color;
+                    ctx.shadowBlur = 20;
+                } else {
+                    ctx.shadowBlur = 0;
+                }
+
+                ctx.fillText(node.innerText, relativeLeft, relativeTop + (10 * scaleY)); // +buffer
+            });
+
+            // 3. Final Blob
+            const finalImage = canvasElement.toDataURL('image/jpeg', 0.85);
+
+            const newStory = {
+                id: Date.now(), // timestamp ID
+                author: currentUser,
+                imageUrl: finalImage,
+                text: storyCaptionInput.value || "",
+                filter: currentFilter,
+                timestamp: Date.now()
+            };
+
+            // Use SyncManager
+            if (window.SyncManager) {
+                SyncManager.addStory(newStory);
+            } else {
+                // Fallback
+                const stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
+                stories.push(newStory);
+                localStorage.setItem('kingdom_stories', JSON.stringify(stories));
+                renderStatusRings();
+            }
+
+            // UI Reset
+            storyEditor.style.display = 'none';
+            cameraInterface.style.display = 'flex';
+
+            // Go Home
+            const homeTab = document.querySelector('[data-tab="home"]');
+            if (homeTab) homeTab.click();
+        };
+    });
+}
