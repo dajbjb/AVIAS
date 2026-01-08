@@ -172,43 +172,69 @@
         </section>
         <section id="create" class="view">
             <!-- Camera Interface -->
+            <!-- Camera Interface -->
             <div id="camera-interface" class="camera-interface">
                 <video id="camera-feed" autoplay playsinline muted></video>
                 <canvas id="camera-canvas" style="display:none;"></canvas>
+                <div id="screen-flash" class="screen-flash-overlay"></div>
 
                 <div class="camera-overlay">
-                    <div class="camera-header">
-                        <h2 class="playfair-italic" id="camera-title">New Story</h2>
+                    <!-- Top Bar -->
+                    <div class="camera-top-bar">
+                        <div class="top-action-col">
+                            <button id="camera-flash-btn" class="camera-action-btn" title="Flash">
+                                <i class="fa-solid fa-bolt"></i>
+                            </button>
+                            <button id="camera-flip-btn" class="camera-action-btn" title="Flip Camera">
+                                <i class="fa-solid fa-rotate"></i>
+                            </button>
+                            <!-- Search / Music could go here -->
+                        </div>
                     </div>
 
-                    <div class="camera-controls">
-                        <!-- Filters -->
-                        <div class="filters-container">
-                            <button class="filter-btn active" data-filter="none">Normal</button>
-                            <button class="filter-btn" data-filter="vintage">Vintage</button>
-                            <button class="filter-btn" data-filter="noir">Noir</button>
-                            <button class="filter-btn" data-filter="warm">Warm</button>
+                    <!-- Bottom Area -->
+                    <!-- Bottom Area -->
+                    <div class="camera-bottom-area">
+                        <!-- Level 2 Filter Capsule (Floating above) -->
+                        <div class="filter-capsule-container">
+                            <div class="glass-capsule" id="level2-capsule">
+                                <span class="current-label" id="capsule-label">Normal</span>
+                                <i class="fa-solid fa-chevron-down" style="font-size:0.7rem; margin-left:5px;"></i>
+
+                                <!-- Hidden Grid for Expansion -->
+                                <div class="capsule-grid" id="capsule-grid">
+                                    <div class="capsule-item active" data-filter="none">Normal</div>
+                                    <div class="capsule-item" data-filter="vintage">Vintage</div>
+                                    <div class="capsule-item" data-filter="noir">Noir</div>
+                                    <div class="capsule-item" data-filter="warm">Warm</div>
+                                    <div class="capsule-item" data-filter="cold">Cold</div>
+                                    <div class="capsule-item" data-filter="drama">Drama</div>
+                                    <div class="capsule-item" data-filter="cinema">Cinema</div>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Main Capture Button -->
+                        <!-- Carousel (Level 3 AR Filters) -->
+                        <div class="filter-carousel-wrapper" id="filter-carousel">
+                            <div class="filter-track" id="filter-track">
+                                <!-- Dynamic JS will populate Level 3 filters -->
+                                <div class="filter-bubble active" data-filter="none" data-name="Normal">
+                                    <div style="width:100%;height:100%;background:#ccc;border-radius:50%;"></div>
+                                </div>
+                                <div class="filter-bubble" data-filter="bunny" data-name="Bunny Ears">
+                                    <div style="width:100%;height:100%;background:pink;border-radius:50%;"></div>
+                                </div>
+                                <div class="filter-bubble" data-filter="glasses" data-name="Cool Glasses">
+                                    <div style="width:100%;height:100%;background:black;border-radius:50%;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Main Capture Button (Visual only, Logic handles click) -->
                         <div class="capture-row">
-                            <button id="capture-btn" class="capture-ring">
-                                <div class="capture-inner"></div>
+                            <button id="capture-btn" class="main-capture-btn">
+                                <div class="inner-circle"></div>
                             </button>
-                        </div>
-
-                        <!-- Mobile Fallback (Hidden by default, shown via JS if needed) -->
-                        <div id="mobile-fallback-container" style="display:none; margin-top: 15px; text-align: center;">
-                            <button id="start-camera-manual" class="editor-btn secondary"
-                                style="background: rgba(0,0,0,0.5); backdrop-filter: blur(5px);">
-                                <i class="fa-solid fa-camera"></i> Start Camera
-                            </button>
-                            <label for="camera-file-input" class="editor-btn secondary"
-                                style="background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); margin-left: 10px;">
-                                <i class="fa-solid fa-upload"></i> Upload
-                            </label>
-                            <input type="file" id="camera-file-input" accept="image/*" capture="user"
-                                style="display: none;">
                         </div>
                     </div>
                 </div>
@@ -522,7 +548,7 @@
         <img class="modal-content" id="modal-image">
     </div>
 
-    <script src="memories-data.js"></script>
+
     <script src="js/core.js" defer></script>
     <script src="js/navigation.js" defer></script>
     <script src="js/home.js" defer></script>
