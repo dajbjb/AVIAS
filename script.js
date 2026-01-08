@@ -44,17 +44,63 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// Sync Manager - Handles Realtime Data
 const SyncManager = {
     CHAT_COLLECTION: 'kingdom_chats',
     STORY_COLLECTION: 'kingdom_stories',
     MEMORIES_COLLECTION: 'kingdom_memories',
 
+    // Backup Keys
+    LOCAL_CHAT_KEY: 'kingdom_chat_backup_v1',
+    LOCAL_STORY_KEY: 'kingdom_story_backup_v1',
+
+    isConnected: false,
+
     init: function () {
-        console.log("Starting Sync Services...");
+        console.log("Starting Hybrid Sync Services...");
+        this.createStatusIndicator();
+
+        // 1. Load Local Data Immediately (Instant Load)
+        this.loadLocalBackup();
+
+        // 2. Connect to Cloud
         this.listenToChats();
         this.listenToStories();
         this.listenToMemories();
+    },
+
+    lastError: "No error yet.",
+
+    createStatusIndicator: function () {
+        const div = document.createElement('div');
+        div.id = 'cloud-status';
+        // Increased size and interactivity for mobile debugging
+        div.style.cssText = "position:fixed; top:15px; left:15px; width:15px; height:15px; border-radius:50%; background:yellow; z-index:9999; box-shadow: 0 0 5px rgba(0,0,0,0.5); cursor:pointer; border: 2px solid white;";
+        document.body.appendChild(div);
+
+        div.onclick = () => {
+            alert("Cloud Status: " + (this.isConnected ? "CONNECTED ✅" : "DISCONNECTED ❌") + "\n\nLast Error:\n" + this.lastError);
+        };
+    },
+
+    updateStatus: function (online, errorMsg = null) {
+        this.isConnected = online;
+        const el = document.getElementById('cloud-status');
+        if (el) el.style.background = online ? '#00ff00' : 'red';
+        if (errorMsg) {
+            console.error("Sync Error:", errorMsg);
+            this.lastError = typeof errorMsg === 'object' ? JSON.stringify(errorMsg) : errorMsg;
+        } else if (online) {
+            this.lastError = "Connected successfully.";
+        }
+    },
+
+    loadLocalBackup: function () {
+        // Chat
+        const localChat = JSON.parse(localStorage.getItem(this.LOCAL_CHAT_KEY) || "[]");
+        if (localChat.length > 0) {
+            chatHistory = localChat;
+            renderChat();
+        }
     },
 
     // --- CHAT SYNC ---
@@ -63,67 +109,101 @@ const SyncManager = {
             .orderBy('timestamp', 'asc')
             .limit(100)
             .onSnapshot((snapshot) => {
-                const messages = [];
-                snapshot.forEach(doc => messages.push(doc.data()));
+                this.updateStatus(true);
+                const cloudMessages = [];
+                snapshot.forEach(doc => cloudMessages.push(doc.data()));
 
-                // Update Global Variable & Render
-                chatHistory = messages;
-                renderChat();
-                scrollToBottom(); // Auto scroll on new message
+                // Merge: We prefer Cloud, but if Cloud is empty and we have local, keep local?
+                // Actually, if connection works, Cloud is truth. 
+                // BUT to solve "deletes everything", we only override if we got data.
+                if (cloudMessages.length > 0) {
+                    chatHistory = cloudMessages;
+                    // Update Backup
+                    localStorage.setItem(this.LOCAL_CHAT_KEY, JSON.stringify(chatHistory));
+                    renderChat();
+                    scrollToBottom();
+                }
+            }, (error) => {
+                this.updateStatus(false, error.message);
             });
     },
 
     sendChat: function (msg) {
-        // Fire & Forget - Firestore handles sync
-        // Add status: 'sent' initially
+        // 1. Optimistic Local Save (Instant UI)
+        // Check for duplicates to avoid adding twice if we are re-sending
+        // Simple check: compare last message timestamp
+        const lastMsg = chatHistory[chatHistory.length - 1];
+        if (!lastMsg || lastMsg.timestamp !== msg.timestamp) {
+            chatHistory.push(msg);
+            localStorage.setItem(this.LOCAL_CHAT_KEY, JSON.stringify(chatHistory));
+            renderChat();
+            scrollToBottom();
+        }
+
+        // 2. Send to Cloud
         msg.status = 'sent';
         db.collection(this.CHAT_COLLECTION).add(msg)
-            .then(() => console.log("Message sent to cloud"))
-            .catch((error) => {
-                console.error("Error sending message: ", error);
-                alert("Error sending message. Check internet connection.");
+            .then(() => {
+                console.log("Sent to cloud");
+                this.updateStatus(true);
+            })
+            .catch((e) => {
+                this.updateStatus(false, e.message);
             });
     },
 
     markMessagesAsRead: function (otherUser) {
-        // Find all unread messages from OTHER user and mark read
+        // Cloud only feature
         const batch = db.batch();
         db.collection(this.CHAT_COLLECTION)
             .where('sender', '==', otherUser)
             .where('status', '!=', 'read')
             .get()
             .then(snapshot => {
+                if (snapshot.empty) return;
                 snapshot.forEach(doc => {
                     const ref = db.collection(this.CHAT_COLLECTION).doc(doc.id);
                     batch.update(ref, { status: 'read' });
                 });
-                return batch.commit();
-            })
-            .catch(e => console.log("Read receipt updated error", e));
+                batch.commit();
+            }).catch(e => console.log(e));
     },
 
     // --- STORY SYNC ---
     listenToStories: function () {
-        // cleanup old stories manually or via rules, here we just filter in UI
         db.collection(this.STORY_COLLECTION)
-            .orderBy('timestamp', 'desc') // Newest first
+            .orderBy('timestamp', 'desc')
             .limit(50)
             .onSnapshot((snapshot) => {
                 const stories = [];
                 snapshot.forEach(doc => stories.push({ id: doc.id, ...doc.data() }));
 
-                // Update Persistent Local for offline/fast load, but rely on listener
-                localStorage.setItem('kingdom_stories', JSON.stringify(stories));
-                renderStatusRings(); // Refresh UI
+                // Persist & Render
+                localStorage.setItem('kingdom_stories', JSON.stringify(stories)); // Use standard key for compatibility
+                renderStatusRings();
             });
     },
 
     addStory: function (storyData) {
+        // Optimistic Local
+        const stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
+        stories.unshift(storyData); // Add to top
+        localStorage.setItem('kingdom_stories', JSON.stringify(stories));
+        renderStatusRings();
+
+        // Cloud
         db.collection(this.STORY_COLLECTION).add(storyData);
     },
 
     deleteStory: function (storyId) {
-        db.collection(this.STORY_COLLECTION).doc(storyId).delete();
+        // Local Delete
+        let stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
+        stories = stories.filter(s => s.id !== storyId && s.timestamp !== storyId); // Handle both types of IDs
+        localStorage.setItem('kingdom_stories', JSON.stringify(stories));
+        renderStatusRings();
+
+        // Cloud Delete
+        db.collection(this.STORY_COLLECTION).doc(storyId).delete().catch(e => console.log(e));
     },
 
     // --- MEMORIES SYNC ---
@@ -135,13 +215,16 @@ const SyncManager = {
                 const fetchedMemories = [];
                 snapshot.forEach(doc => fetchedMemories.push({ id: doc.id, ...doc.data() }));
 
-                // Update Global Variable
                 memories = fetchedMemories;
+                localStorage.setItem('kingdom_memories', JSON.stringify(memories));
                 renderMemories();
             });
     },
 
     addMemory: function (memoryData) {
+        memories.unshift(memoryData);
+        localStorage.setItem('kingdom_memories', JSON.stringify(memories));
+        renderMemories();
         db.collection(this.MEMORIES_COLLECTION).add(memoryData);
     }
 };
