@@ -114,6 +114,33 @@ const SyncManager = {
         if (errorMsg) console.warn("Sync:", errorMsg);
     },
 
+    uploadImage: async function (base64Image) {
+        const clientId = 'c7e6c0c2017357a'; // Public Anonymous Client ID (Safe for this use)
+        try {
+            const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
+            const formData = new FormData();
+            formData.append("image", base64Data);
+            formData.append("type", "base64");
+
+            const response = await fetch("https://api.imgur.com/3/image", {
+                method: "POST",
+                headers: { Authorization: `Client-ID ${clientId}` },
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                console.log("Image uploaded to cloud:", data.data.link);
+                return data.data.link;
+            } else {
+                throw new Error("Upload failed: " + data.data.error);
+            }
+        } catch (e) {
+            console.warn("Cloud upload failed, using local backup.", e);
+            return base64Image; // Fallback to Base64 if upload fails
+        }
+    },
+
     loadLocalBackup: function () {
         const localChat = this.getLocal();
         if (localChat.length > 0) {
@@ -187,7 +214,10 @@ const SyncManager = {
             });
     },
 
-    addStory: function (storyData) {
+    addStory: async function (storyData) {
+        if (storyData.imageUrl && storyData.imageUrl.startsWith('data:')) {
+            storyData.imageUrl = await this.uploadImage(storyData.imageUrl);
+        }
         const stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
         stories.unshift(storyData);
         localStorage.setItem('kingdom_stories', JSON.stringify(stories));
