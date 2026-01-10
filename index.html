@@ -172,50 +172,33 @@
         </section>
         <section id="create" class="view">
             <!-- Camera Interface -->
+            <!-- MAIN CAMERA INTERFACE (v2.0 Architecture) -->
             <div id="camera-interface" class="camera-interface">
-                <video id="camera-feed" autoplay playsinline muted></video>
-                <canvas id="camera-canvas" style="display:none;"></canvas>
-                <canvas id="ar-overlay"></canvas>
-                <div id="ar-debug-overlay"
-                    style="position:absolute; top:10px; left:10px; color:lime; background:rgba(0,0,0,0.5); padding:5px; z-index:9999; pointer-events:none; font-family:monospace; font-size:12px;">
-                    AR Status: Init...
-                </div>
+
+                <!-- SINGLE OUTPUT CANVAS (Everything is drawn here) -->
+                <canvas id="main-camera-canvas" class="full-screen-canvas"></canvas>
+
                 <div id="screen-flash" class="screen-flash-overlay"></div>
 
+                <!-- Top Bar -->
                 <div class="camera-overlay">
-                    <!-- Top Bar -->
                     <div class="camera-top-bar">
-                        <div class="top-action-col">
-                            <button id="camera-flash-btn" class="camera-action-btn" title="Flash">
-                                <i class="fa-solid fa-bolt"></i>
-                            </button>
-                            <button id="camera-flip-btn" class="camera-action-btn" title="Flip Camera">
-                                <i class="fa-solid fa-rotate"></i>
-                            </button>
-                            <!-- Search / Music could go here -->
-                        </div>
+                        <button id="camera-flash-btn" class="icon-btn">
+                            <i class="fa-solid fa-bolt"></i>
+                        </button>
+                        <h2 class="playfair-italic app-title-small"
+                            style="color:white; font-size:1.2rem; text-shadow:0 2px 10px rgba(0,0,0,0.5);">Memories</h2>
+                        <button id="camera-flip-btn" class="icon-btn">
+                            <i class="fa-solid fa-rotate"></i>
+                        </button>
                     </div>
 
                     <!-- Bottom Area -->
                     <div class="camera-bottom-area">
+                        <!-- UNIFIED CAROUSEL REMOVED - MOVED TO BOTTOM NAVBAR -->
+                        <div class="filter-carousel-placeholder" style="flex-grow:1;"></div>
 
-
-                        <!-- Carousel (Level 3 AR Filters) -->
-                        <div class="filter-carousel-wrapper" id="filter-carousel">
-                            <div class="filter-track" id="filter-track">
-                                <div class="filter-bubble active" data-filter="none" data-name="Normal">
-                                    <div class="bubble-inner" style="background:#ccc;"></div>
-                                </div>
-                                <div class="filter-bubble" data-filter="bunny" data-name="Bunny Options">
-                                    <div class="bubble-inner" style="background:pink;">🐰</div>
-                                </div>
-                                <div class="filter-bubble" data-filter="glasses" data-name="Cool Glasses">
-                                    <div class="bubble-inner" style="background:black; color:white;">👓</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Main Capture Button (Visual only, Logic handles click) -->
+                        <!-- Capture Button -->
                         <div class="capture-row">
                             <button id="capture-btn" class="main-capture-btn">
                                 <div class="inner-circle"></div>
@@ -400,11 +383,7 @@
                 </div>
 
                 <div id="game-slot1" class="game-view active">
-                    <!-- Future Game Slot 1 -->
-                    <div class="test-game glass-card">
-                        <h2 class="playfair-italic">Game Slot 1</h2>
-                        <p class="montserrat">Coming Soon...</p>
-                    </div>
+                    <iframe src="games_repository/roulette_wheel/wheel_game.html" class="game-iframe"></iframe>
                 </div>
                 <div id="game-slot2" class="game-view">
                     <!-- Future Game Slot 2 -->
@@ -479,34 +458,19 @@
                 <i class="fa-solid fa-arrow-left"></i>
             </button>
 
-            <div class="nav-filters-scroll">
+            <div class="nav-filters-scroll" id="dynamic-filters-container">
                 <button class="nav-filter-item active" data-filter="none">Normal</button>
-                <button class="nav-filter-item" data-filter="vintage">Vintage</button>
-                <button class="nav-filter-item" data-filter="noir">Noir</button>
-                <button class="nav-filter-item" data-filter="warm">Warm</button>
-                <button class="nav-filter-item" data-filter="cold">Cold</button>
-                <button class="nav-filter-item" data-filter="drama">Drama</button>
-                <button class="nav-filter-item" data-filter="cinema">Cinema</button>
+                <button class="nav-filter-item" data-filter="galaxy">Galaxy 🌌</button>
+                <button class="nav-filter-item" data-filter="hope">Hope ✨</button>
+                <button class="nav-filter-item" data-filter="humanoid">Robot 🤖</button>
+                <button class="nav-filter-item" data-filter="makeup">Makeup 💄</button>
             </div>
         </div>
     </nav>
 
-    <!-- AI Designing Loader Overlay -->
-    <div id="ai-loader" class="ai-loader">
-        <i class="fa-solid fa-wand-magic-sparkles ai-sparkle"></i>
-        <p>AI Designing Your Memory...</p>
-    </div>
+    <!-- AR/3D Libraries Removed by User Request -->
 
-    <!-- Chat Image Viewer Modal -->
-    <div id="chat-image-modal" class="image-modal" style="display: none;">
-        <span class="close-modal-btn" onclick="closeChatImage()">&times;</span>
-        <img class="modal-content" id="modal-image">
-    </div>
-
-
-    <!-- AR Face Detection Library (Modern Fork) -->
-    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
-
+    <script src="memories-data.js"></script>
     <script src="js/core.js" defer></script>
     <script src="js/navigation.js" defer></script>
     <script src="js/home.js" defer></script>
