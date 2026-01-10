@@ -1,0 +1,574 @@
+/* --- CORE VARIABLES --- */
+:root {
+    --bg-dark: #1a0b05;
+    --wood-primary: #5c2815;
+    --wood-dark: #3e1b0c;
+    --gold-metallic: linear-gradient(135deg, #bf953f 0%, #fcf6ba 25%, #b38728 50%, #fbf5b7 75%, #aa771c 100%);
+    --text-primary: #ffffff;
+    --ease-wheel: cubic-bezier(0.15, 0.9, 0.35, 1.0);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    background-color: #050505;
+    background-image: radial-gradient(circle at center, #1a100c 0%, #000000 100%);
+    color: var(--text-primary);
+    font-family: 'Playfair Display', serif;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* --- AMBIENT --- */
+.ambient-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at 50% 30%, rgba(255, 180, 100, 0.05), transparent 60%);
+    z-index: 0;
+}
+
+/* --- 3D SCENE SCOPE --- */
+/* This container holds the 3D world. Everything inside is 3D. Everything outside is 2D. */
+.scene-scope {
+    position: absolute;
+    inset: 0;
+    perspective: 1200px;
+    /* Perspective applied ONLY here */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    overflow: visible;
+    /* Ensure stoppers don't get clipped */
+}
+
+/* --- ENGINE CONTAINER --- */
+.engine-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transform-style: preserve-3d;
+}
+
+/* --- UI LAYER (2D) --- */
+.ui-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    /* Let clicks pass through to the wheel */
+    z-index: 20;
+}
+
+/* Header (Now in UI Layer) */
+.engine-header {
+    position: absolute;
+    top: 30px;
+    width: 100%;
+    text-align: center;
+    pointer-events: auto;
+    text-shadow: 0 4px 10px rgba(0, 0, 0, 0.8);
+}
+
+.logo-text {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    letter-spacing: 5px;
+    font-size: 2rem;
+    background: var(--gold-metallic);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-transform: uppercase;
+}
+
+.sub-logo {
+    display: block;
+    font-size: 0.8rem;
+    color: #8a6e2f;
+    letter-spacing: 8px;
+    margin-top: 5px;
+    font-family: 'Montserrat', sans-serif;
+}
+
+/* --- 3D WHEEL STAGE --- */
+.wheel-stage {
+    position: relative;
+    width: 600px;
+    height: 600px;
+    transform-style: preserve-3d;
+    transform: rotateX(55deg) scale(0.9);
+    /* The 3D Tilt */
+    transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wheel-assemblage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 1. THE WOODEN BOWL - Enhanced Texture */
+.shadow-plate {
+    position: absolute;
+    width: 640px;
+    height: 640px;
+    border-radius: 50%;
+    /* Richer Mahogany Texture */
+    background:
+        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.05), transparent 40%),
+        repeating-radial-gradient(#3e1b0c 0%,
+            #2a1006 4%,
+            #3e1b0c 8%,
+            #1e0a04 12%);
+    box-shadow:
+        inset 0 0 50px rgba(0, 0, 0, 0.9),
+        /* Deeper inner shadow */
+        0 40px 80px rgba(0, 0, 0, 0.7),
+        /* Object shadow */
+        0 15px 0 #0f0502;
+    /* Darker side profile */
+    border: 2px solid #5c2815;
+    transform: translateZ(-20px);
+
+    left: 50%;
+    top: 50%;
+    margin-left: -320px;
+    margin-top: -320px;
+}
+
+/* Gold Rim */
+.shadow-plate::after {
+    content: '';
+    position: absolute;
+    inset: 20px;
+    /* The lip width */
+    border-radius: 50%;
+    border: 6px solid #bf953f;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+}
+
+/* 2. THE MAIN CANVAS (The Spinning Part) */
+#wheel-canvas {
+    position: absolute;
+    width: 600px;
+    /* Exact match for the hole (640 - 20*2) */
+    height: 600px;
+    border-radius: 50%;
+    transform: translateZ(-5px);
+    /* Center it perfectly */
+    left: 50%;
+    top: 50%;
+    margin-left: -300px;
+    /* Half of 600 */
+    margin-top: -300px;
+}
+
+/* 3. THE GOLDEN TURRET - Enhanced Detail */
+.center-hub {
+    position: absolute;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    transform-style: preserve-3d;
+    transform: translateZ(30px);
+    left: 50%;
+    top: 50%;
+    margin-left: -70px;
+    margin-top: -70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.center-hub::before {
+    /* Base gold plate */
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(from 45deg, #bf953f, #fcf6ba, #bf953f, #8a6e2f, #bf953f);
+    /* Metallic Cone effect */
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.6), inset 0 -5px 15px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.hub-knob {
+    /* Inner spinner */
+    background: conic-gradient(from -45deg, #bf953f, #fcf6ba, #bf953f, #8a6e2f, #bf953f);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    transform: translateZ(20px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Jewel on top */
+.hub-knob::after {
+    content: '';
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #ffffff 0%, #e6e6fa 40%, #bf953f 100%);
+    /* Pearl/Gold look */
+    transform: translateZ(10px);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.hub-shine {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    transform: translateZ(15px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.hub-shine::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 15px;
+    background: var(--gold-metallic);
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.hub-shine::after {
+    content: '';
+    position: absolute;
+    width: 15px;
+    height: 100%;
+    background: var(--gold-metallic);
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+/* 4. STOPPER (Refined 3D Metallic Pointer) */
+.stopper-mechanism {
+    position: absolute;
+    top: -40px;
+    /* Closer to the wheel */
+    left: 50%;
+    transform: translateX(-50%) translateZ(50px) rotateX(-20deg);
+    /* Angled down */
+    width: 60px;
+    height: 80px;
+    z-index: 100;
+    filter: drop-shadow(0 10px 10px rgba(0, 0, 0, 0.6));
+}
+
+.needle {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.needle-body {
+    width: 0;
+    height: 0;
+    border-left: 20px solid transparent;
+    /* Wider */
+    border-right: 20px solid transparent;
+    border-top: 50px solid url(#gold-gradient);
+    /* Fallback color if gradient fails */
+    border-top-color: #fcf6ba;
+    /* Main gold color */
+
+    border: none;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #bf953f 0%, #fcf6ba 50%, #8a6e2f 100%);
+    clip-path: polygon(50% 100%, 0 0, 100% 0);
+    box-shadow: inset 0 5px 15px rgba(255, 255, 255, 0.4);
+}
+
+/* Center Diamond on Needle */
+.needle::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 16px;
+    height: 16px;
+    background: radial-gradient(circle, #fff 0%, #bf953f 100%);
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+
+/* --- CONTROLS & UI --- */
+.spin-trigger-btn {
+    position: absolute;
+    bottom: -120px;
+    transform: translateZ(50px);
+    background: linear-gradient(180deg, #3e1b0c 0%, #1a0b05 100%);
+    border: 2px solid #bf953f;
+    padding: 15px 60px;
+    border-radius: 8px;
+    color: #fcf6ba;
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+    transition: transform 0.2s;
+}
+
+.spin-trigger-btn:hover {
+    transform: translateZ(50px) scale(1.05);
+}
+
+/* --- CONFIG PANEL (2D Overlay) --- */
+.config-panel {
+    position: fixed;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    background: rgba(20, 10, 5, 0.95);
+    border: 1px solid #5c2815;
+    width: 280px;
+    padding: 20px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    max-height: 70vh;
+    transition: transform 0.4s ease;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.8);
+    z-index: 5000;
+    /* High Z-Index */
+    pointer-events: auto;
+    /* Enable interaction */
+}
+
+.config-panel.minimized {
+    transform: translateY(-50%) translateX(320px);
+}
+
+/* UI Elements */
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.panel-header h3 {
+    color: #bf953f;
+    font-family: 'Playfair Display', serif;
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.minimize-btn {
+    background: transparent;
+    border: none;
+    color: #bf953f;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.panel-content {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.segments-list-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    scrollbar-width: thin;
+    scrollbar-color: #5c2815 transparent;
+}
+
+.segment-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.glass-input {
+    flex-grow: 1;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid #5c2815;
+    padding: 8px;
+    color: #fcf6ba;
+    border-radius: 4px;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.remove-segment-btn {
+    background: rgba(255, 50, 50, 0.1);
+    border: 1px solid rgba(255, 50, 50, 0.2);
+    width: 30px;
+    border-radius: 4px;
+    color: #ff6b6b;
+    cursor: pointer;
+}
+
+.action-row {
+    display: flex;
+    gap: 10px;
+}
+
+.icon-action-btn,
+.secondary-btn {
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.icon-action-btn {
+    flex: 1;
+    background: transparent;
+    border: 1px solid #5c2815;
+    color: #bf953f;
+}
+
+.secondary-btn {
+    flex: 2;
+    background: #bf953f;
+    border: none;
+    color: #1a0b05;
+    font-weight: 700;
+}
+
+/* Modal (2D OVERLAY FIXED) */
+.victory-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    /* Max Z-Index */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(5px);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    margin: 0;
+    padding: 0;
+}
+
+.victory-modal.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.victory-card {
+    position: relative;
+    /* Center in flex container */
+    margin: auto;
+    background: linear-gradient(135deg, #1a0b05 0%, #2b1108 100%);
+    border: 2px solid #bf953f;
+    padding: 40px;
+    border-radius: 12px;
+    text-align: center;
+    color: #fff;
+    transform: scale(0.9);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+    max-width: 400px;
+    width: 90%;
+}
+
+.victory-modal.active .victory-card {
+    transform: scale(1);
+}
+
+.victory-eyebrow {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.8rem;
+    color: #8a6e2f;
+    letter-spacing: 4px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+.victory-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    color: #bf953f;
+    margin: 10px 0 20px 0;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    line-height: 1.1;
+}
+
+.victory-desc {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.9rem;
+    color: #aaa;
+    margin-bottom: 25px;
+}
+
+.claim-btn {
+    background: linear-gradient(135deg, #bf953f 0%, #aa771c 100%);
+    border: none;
+    padding: 12px 40px;
+    border-radius: 4px;
+    color: #1a0b05;
+    font-weight: bold;
+    font-family: 'Montserrat', sans-serif;
+    cursor: pointer;
+    transition: transform 0.2s;
+    letter-spacing: 1px;
+}
+
+.claim-btn:hover {
+    transform: scale(1.05);
+    background: #fcf6ba;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .wheel-stage {
+        transform: rotateX(55deg) scale(0.6);
+    }
+
+    .config-panel {
+        width: 100%;
+        top: auto;
+        bottom: 0;
+        transform: translateY(90%);
+    }
+
+    .config-panel.active,
+    .config-panel:focus-within {
+        transform: translateY(0);
+    }
+}
