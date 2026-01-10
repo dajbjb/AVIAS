@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ultimate Kingdom Wheel</title>
+    <!-- Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap"
+        rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="wheel_engine.css">
+</head>
+
+<body>
+
+    <!-- 1. BACKGROUND LAYERS -->
+    <div class="ambient-layer"></div>
+
+    <!-- 2. THE 3D GAME WORLD (Isolated) -->
+    <div class="scene-scope">
+        <div class="engine-container">
+            <main class="wheel-stage">
+                <div class="wheel-assemblage">
+                    <div class="shadow-plate"></div>
+                    <canvas id="wheel-canvas"></canvas>
+                    <div class="center-hub">
+                        <div class="hub-knob"></div>
+                        <div class="hub-shine"></div>
+                    </div>
+                </div>
+                <div class="stopper-mechanism">
+                    <div class="needle" id="needle">
+                        <div class="needle-body"></div>
+                    </div>
+                </div>
+                <button id="spin-trigger" class="spin-trigger-btn">
+                    <span class="btn-text">SPIN</span>
+                    <span class="btn-glow"></span>
+                </button>
+            </main>
+        </div>
+    </div>
+
+    <!-- 3. UI OVERLAY - HEADER (Fixed on screen) -->
+    <header class="engine-header"
+        style="position: fixed; top: 30px; left: 0; width: 100%; text-align: center; z-index: 4000; pointer-events: none;">
+        <h1 class="logo-text">KINGDOM<span class="sub-logo">ROULETTE</span></h1>
+        <div class="status-indicator" id="engine-status">
+            <span class="state-dot"></span> <span id="status-label">SYSTEM READY</span>
+        </div>
+    </header>
+
+    <!-- 4. UI OVERLAY - CONFIG PANEL (Fixed on screen - Direct Body Child) -->
+    <div class="config-panel" id="config-panel">
+        <div class="panel-header">
+            <h3><i class="fa-solid fa-sliders"></i> Smart Config</h3>
+            <button class="minimize-btn" id="toggle-config"><i class="fa-solid fa-chevron-down"></i></button>
+        </div>
+        <div class="panel-content">
+            <div class="segments-list-container" id="segments-container"></div>
+            <div class="action-row">
+                <button id="add-segment-btn" class="icon-action-btn"><i class="fa-solid fa-plus"></i></button>
+                <button id="update-wheel" class="secondary-btn">UPDATE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. UI OVERLAY - VICTORY MODAL (Fixed on screen - Direct Body Child) -->
+    <div id="victory-modal" class="victory-modal">
+        <canvas id="particle-canvas" style="position:absolute; inset:0; pointer-events:none;"></canvas>
+
+        <div class="victory-card glass-panel">
+            <h2 class="victory-eyebrow">DESTINY CHOSE</h2>
+            <h1 id="victory-text" class="victory-title">SAMPLE</h1>
+            <p class="victory-desc">The stars have aligned for this moment.</p>
+            <button id="claim-btn" class="claim-btn">CONTINUE</button>
+        </div>
+    </div>
+
+    <!-- Audio Assets -->
+    <div id="audio-assets" style="display: none;">
+        <audio id="tick-sound" src="assets/sounds/tick.mp3" preload="auto"></audio>
+        <audio id="win-sound" src="assets/sounds/win.mp3" preload="auto"></audio>
+    </div>
+
+    <script src="wheel_engine.js"></script>
+</body>
+
+</html>
