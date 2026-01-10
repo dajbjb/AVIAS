@@ -9,6 +9,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. Initialize UI Helper Functions if needed
     if (typeof initWheel === 'function') initWheel();
 
+    // 1.5. Initialize Memories from persistent data
+    if (typeof getInitialMemories === 'function') {
+        window.memories = getInitialMemories();
+    }
+
     // 2. Initial Render of content (Local Optimistic)
     if (typeof renderHomeHighlights === 'function') {
         renderHomeHighlights();
