@@ -185,18 +185,29 @@ navItems.forEach(item => {
 
                 // Camera Handling
                 if (target === 'create') {
-                    // Delay camera start slightly for animation smoothness
+                    console.log("Nav: Switching to Create. Starting Camera...");
+
+                    // Delay slightly to allow UI transition
                     setTimeout(() => {
-                        if (typeof startCamera === 'function') startCamera();
-                        // Switch nav to filters AFTER camera starts or concurrently
+                        if (window.AppCamera && window.AppCamera.startSequence) {
+                            window.AppCamera.startSequence();
+                        } else if (typeof startCamera === 'function') {
+                            startCamera();
+                        } else {
+                            console.error("Nav: Camera start function not found!");
+                        }
                         setNavMode('filters');
                     }, 50);
 
-                    window.activeCameraMode = 'story';
+                    if (window.activeCameraMode !== 'story') window.activeCameraMode = 'story';
 
                 } else {
-                    if (typeof stopCamera === 'function') stopCamera();
-                    // Ensure normal nav is visible when leaving camera
+                    console.log("Nav: Leaving Create. Stopping Camera...");
+                    if (window.AppCamera && window.AppCamera.stopSequence) {
+                        window.AppCamera.stopSequence();
+                    } else if (typeof stopCamera === 'function') {
+                        stopCamera();
+                    }
                     setNavMode('main');
                 }
 
