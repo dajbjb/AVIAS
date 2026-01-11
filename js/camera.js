@@ -816,21 +816,31 @@ class CameraApp {
     capturePhoto() {
         const imageDataUrl = this.canvas.toDataURL('image/png');
 
-        const captureImg = document.getElementById('captured-image');
-        const textLayer = document.getElementById('text-layer');
-        const editorSection = document.getElementById('story-editor');
-        const cameraOverlay = document.getElementById('camera-overlay');
+        // Flash effect
+        const flashDiv = document.createElement('div');
+        flashDiv.className = 'screen-flash';
+        flashDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:white;z-index:9999;pointer-events:none;';
+        document.body.appendChild(flashDiv);
+        setTimeout(() => flashDiv.remove(), 300);
 
-        if (captureImg && editorSection) {
-            captureImg.src = imageDataUrl;
-            textLayer.innerHTML = '';
-            editorSection.style.display = 'flex';
-            cameraOverlay.style.display = 'none';
+        // Open the new Photo Editor
+        if (window.openPhotoEditor) {
+            console.log('Opening Photo Editor...');
+            window.openPhotoEditor(imageDataUrl);
+        } else {
+            // Fallback to old editor
+            console.log('Photo Editor not found, using fallback...');
+            const captureImg = document.getElementById('captured-image');
+            const textLayer = document.getElementById('text-layer');
+            const editorSection = document.getElementById('story-editor');
+            const cameraOverlay = document.getElementById('camera-overlay');
 
-            const flashDiv = document.createElement('div');
-            flashDiv.className = 'screen-flash';
-            document.body.appendChild(flashDiv);
-            setTimeout(() => flashDiv.remove(), 300);
+            if (captureImg && editorSection) {
+                captureImg.src = imageDataUrl;
+                if (textLayer) textLayer.innerHTML = '';
+                editorSection.style.display = 'flex';
+                if (cameraOverlay) cameraOverlay.style.display = 'none';
+            }
         }
     }
 

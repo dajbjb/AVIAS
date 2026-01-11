@@ -1,0 +1,587 @@
+/* ========================================
+   PHOTO EDITOR - Mobile First Design
+   ======================================== */
+
+.photo-editor-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: 9000;
+    display: none;
+    flex-direction: column;
+    direction: rtl;
+}
+
+.photo-editor-screen.active {
+    display: flex;
+}
+
+/* Loading Overlay */
+.editor-loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.editor-loading-overlay.active {
+    display: flex;
+}
+
+.ai-loading-animation {
+    width: 50px;
+    height: 50px;
+    border: 3px solid rgba(212, 175, 55, 0.3);
+    border-top-color: #d4af37;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.loading-text {
+    color: #d4af37;
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+/* ========================================
+   TOP BAR
+   ======================================== */
+.editor-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 20px;
+    padding-top: env(safe-area-inset-top, 15px);
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    z-index: 50;
+}
+
+.editor-back-btn,
+.editor-save-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.editor-save-btn {
+    background: linear-gradient(135deg, #d4af37, #aa8a2e);
+    border-radius: 20px;
+    padding: 10px 20px;
+    font-weight: 600;
+}
+
+.editor-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+    margin: 0;
+}
+
+/* ========================================
+   PREVIEW AREA - Full Screen Image
+   ======================================== */
+.editor-preview-area {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #0a0a0a;
+}
+
+.editor-canvas-container {
+    position: relative;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+#editor-canvas,
+.editor-drawing-layer {
+    max-width: 100%;
+    max-height: 60vh;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.editor-drawing-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+}
+
+.editor-drawing-layer.drawing-active {
+    pointer-events: auto;
+}
+
+/* Undo/Redo Floating Buttons */
+.undo-redo-bar {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    display: flex;
+    gap: 10px;
+    z-index: 20;
+}
+
+.undo-redo-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border: none;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.undo-redo-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.undo-redo-btn:not(:disabled):active {
+    transform: scale(0.9);
+    background: rgba(212, 175, 55, 0.3);
+}
+
+/* ========================================
+   AI SUGGESTIONS BAR
+   ======================================== */
+.ai-suggestions-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    background: rgba(212, 175, 55, 0.1);
+    border-top: 1px solid rgba(212, 175, 55, 0.2);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.ai-suggestion-label {
+    color: #d4af37;
+    font-size: 12px;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+#ai-suggestions-container {
+    display: flex;
+    gap: 8px;
+}
+
+.ai-suggestion-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 20px;
+    padding: 8px 15px;
+    color: #fff;
+    font-size: 12px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ai-suggestion-btn:active {
+    background: rgba(212, 175, 55, 0.3);
+    transform: scale(0.95);
+}
+
+/* ========================================
+   MODE TABS
+   ======================================== */
+.editor-mode-tabs {
+    display: flex;
+    background: rgba(20, 20, 20, 0.9);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mode-tab {
+    flex: 1;
+    padding: 12px;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mode-tab i {
+    font-size: 18px;
+}
+
+.mode-tab.active {
+    color: #d4af37;
+    background: rgba(212, 175, 55, 0.1);
+}
+
+/* ========================================
+   TOOLS PANEL
+   ======================================== */
+.editor-tools-panel {
+    background: rgba(15, 15, 15, 0.95);
+    backdrop-filter: blur(20px);
+    padding: 15px;
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+    max-height: 45vh;
+    overflow-y: auto;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.editor-tools-panel.hidden {
+    transform: translateY(100%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.tools-container {
+    display: none;
+}
+
+.tools-container.active {
+    display: block;
+}
+
+/* Creative Tools Grid */
+.creative-tools-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.creative-tool-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 15px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.creative-tool-btn i {
+    font-size: 20px;
+    color: #d4af37;
+}
+
+.creative-tool-btn:active,
+.creative-tool-btn.active {
+    background: rgba(212, 175, 55, 0.2);
+    border-color: #d4af37;
+}
+
+/* AI Tools Grid */
+.ai-tools-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.ai-tool-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 20px 15px;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.05));
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 15px;
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ai-tool-btn i {
+    font-size: 24px;
+    color: #d4af37;
+}
+
+.ai-tool-btn:active {
+    transform: scale(0.95);
+    background: rgba(212, 175, 55, 0.3);
+}
+
+/* ========================================
+   SUB-TOOLS PANELS
+   ======================================== */
+.sub-tools-panel {
+    display: none;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    animation: slideUp 0.3s ease;
+}
+
+.sub-tools-panel.active {
+    display: block;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Brush Options */
+.brush-options {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.brush-type-btn {
+    width: 45px;
+    height: 45px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.brush-type-btn.active {
+    background: #d4af37;
+    color: #000;
+}
+
+.color-picker-container {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.color-option {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.color-option.active {
+    border-color: #fff;
+    transform: scale(1.1);
+}
+
+.size-slider-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #fff;
+}
+
+.size-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+}
+
+.size-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #d4af37;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+#brush-size-display {
+    min-width: 35px;
+    text-align: center;
+    font-size: 12px;
+}
+
+/* Stickers Grid */
+.stickers-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+}
+
+.sticker-item {
+    font-size: 28px;
+    text-align: center;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.sticker-item:active {
+    transform: scale(1.2);
+    background: rgba(212, 175, 55, 0.2);
+}
+
+/* Adjustment Sliders */
+.adjustment-sliders {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.adjustment-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.adjustment-row label {
+    min-width: 60px;
+    color: #aaa;
+    font-size: 12px;
+}
+
+.adjustment-row input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+}
+
+.adjustment-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #d4af37;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.value-display {
+    min-width: 30px;
+    text-align: center;
+    color: #fff;
+    font-size: 12px;
+}
+
+/* Style/Background Grid */
+.style-grid,
+.background-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.style-option,
+.background-option {
+    padding: 20px 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    font-size: 14px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.style-option:active,
+.background-option:active {
+    transform: scale(0.95);
+    border-color: #d4af37;
+}
+
+/* AI Prompt */
+.ai-prompt-container {
+    margin-top: 15px;
+    display: none;
+}
+
+.ai-prompt-container.active {
+    display: block;
+}
+
+.ai-prompt-input {
+    width: 100%;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 12px;
+    padding: 12px;
+    color: #fff;
+    font-size: 14px;
+    resize: none;
+    font-family: inherit;
+}
+
+.ai-prompt-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.ai-prompt-submit {
+    width: 100%;
+    margin-top: 10px;
+    padding: 15px;
+    background: linear-gradient(135deg, #d4af37, #aa8a2e);
+    border: none;
+    border-radius: 12px;
+    color: #000;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}

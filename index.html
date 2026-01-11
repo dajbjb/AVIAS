@@ -11,6 +11,7 @@
         rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="login-ui.css">
+    <link rel="stylesheet" href="css/photo-editor.css">
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -430,7 +431,300 @@
     <audio id="dice-sound" src="https://assets.mixkit.co/active_storage/sfx/2045/2045-preview.mp3"
         preload="auto"></audio>
 
-    <!-- Liquid Glass Navigation -->
+    <!-- ===== PHOTO EDITOR SCREEN - "Dual Studio" ===== -->
+    <div id="photo-editor-screen" class="photo-editor-screen">
+        <!-- Loading Overlay -->
+        <div class="editor-loading-overlay">
+            <div class="ai-loading-animation"></div>
+            <span class="loading-text">מעבד...</span>
+        </div>
+
+        <!-- Top Bar -->
+        <div class="editor-top-bar">
+            <button id="editor-back-btn" class="editor-back-btn">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <h2 class="editor-title">עריכה</h2>
+            <button id="editor-save-btn" class="editor-save-btn">
+                <i class="fa-solid fa-download"></i> שמור
+            </button>
+        </div>
+
+        <!-- Image Preview Area -->
+        <div class="editor-preview-area">
+            <div class="editor-canvas-container">
+                <canvas id="editor-canvas"></canvas>
+                <canvas id="editor-drawing-canvas" class="editor-drawing-layer"></canvas>
+            </div>
+
+            <!-- Undo/Redo -->
+            <div class="undo-redo-bar">
+                <button id="editor-undo-btn" class="undo-redo-btn" disabled>
+                    <i class="fa-solid fa-rotate-left"></i>
+                </button>
+                <button id="editor-redo-btn" class="undo-redo-btn" disabled>
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- AI Suggestions Bar -->
+        <div class="ai-suggestions-bar">
+            <span class="ai-suggestion-label">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> AI מציע:
+            </span>
+            <div id="ai-suggestions-container">
+                <button class="ai-suggestion-btn" data-action="enhance">✨ שפר תאורה</button>
+                <button class="ai-suggestion-btn" data-action="warm">🌅 הוסף חום</button>
+                <button class="ai-suggestion-btn" data-action="vibrant">🎨 צבעים חיים</button>
+            </div>
+        </div>
+
+        <!-- Mode Tabs -->
+        <div class="editor-mode-tabs">
+            <button class="mode-tab active" data-mode="creative">
+                <i class="fa-solid fa-palette"></i>
+                <span>Creative</span>
+            </button>
+            <button class="mode-tab" data-mode="ai">
+                <i class="fa-solid fa-robot"></i>
+                <span>AI Magic</span>
+            </button>
+        </div>
+
+        <!-- Tools Panel -->
+        <div class="editor-tools-panel">
+            <!-- Creative Tools -->
+            <div id="creative-tools" class="tools-container active">
+                <div class="creative-tools-grid">
+                    <button class="creative-tool-btn" data-tool="draw">
+                        <i class="fa-solid fa-pencil"></i>
+                        <span>ציור</span>
+                    </button>
+                    <button class="creative-tool-btn" data-tool="text">
+                        <i class="fa-solid fa-font"></i>
+                        <span>טקסט</span>
+                    </button>
+                    <button class="creative-tool-btn" data-tool="stickers">
+                        <i class="fa-solid fa-face-smile"></i>
+                        <span>מדבקות</span>
+                    </button>
+                    <button class="creative-tool-btn" data-tool="crop">
+                        <i class="fa-solid fa-crop"></i>
+                        <span>חיתוך</span>
+                    </button>
+                    <button class="creative-tool-btn" data-tool="adjust">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>התאמות</span>
+                    </button>
+                    <button class="creative-tool-btn" data-tool="filters">
+                        <i class="fa-solid fa-swatchbook"></i>
+                        <span>פילטרים</span>
+                    </button>
+                </div>
+
+                <!-- Draw Options -->
+                <div id="draw-options" class="sub-tools-panel">
+                    <div class="brush-options">
+                        <button class="brush-type-btn active" data-brush="normal">
+                            <i class="fa-solid fa-paintbrush"></i>
+                        </button>
+                        <button class="brush-type-btn" data-brush="neon">
+                            <i class="fa-solid fa-bolt"></i>
+                        </button>
+                        <button class="brush-type-btn" data-brush="glitter">
+                            <i class="fa-solid fa-sparkles"></i>
+                        </button>
+                        <button class="brush-type-btn" data-brush="sketch">
+                            <i class="fa-solid fa-pen-nib"></i>
+                        </button>
+
+                        <div class="color-picker-container">
+                            <button class="color-option active" data-color="#ffffff"
+                                style="background:#ffffff"></button>
+                            <button class="color-option" data-color="#ff4d4d" style="background:#ff4d4d"></button>
+                            <button class="color-option" data-color="#4dff4d" style="background:#4dff4d"></button>
+                            <button class="color-option" data-color="#4d4dff" style="background:#4d4dff"></button>
+                            <button class="color-option" data-color="#ffff4d" style="background:#ffff4d"></button>
+                            <button class="color-option" data-color="#ff4dff" style="background:#ff4dff"></button>
+                        </div>
+
+                        <div class="size-slider-container">
+                            <i class="fa-solid fa-circle" style="font-size:8px;color:#fff"></i>
+                            <input type="range" id="brush-size-slider" class="size-slider" min="1" max="30" value="5">
+                            <i class="fa-solid fa-circle" style="font-size:16px;color:#fff"></i>
+                            <span id="brush-size-display">5px</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stickers Options -->
+                <div id="stickers-options" class="sub-tools-panel">
+                    <div class="stickers-grid">
+                        <div class="sticker-item">😀</div>
+                        <div class="sticker-item">😍</div>
+                        <div class="sticker-item">🥰</div>
+                        <div class="sticker-item">😎</div>
+                        <div class="sticker-item">🤩</div>
+                        <div class="sticker-item">😘</div>
+                        <div class="sticker-item">❤️</div>
+                        <div class="sticker-item">💕</div>
+                        <div class="sticker-item">💖</div>
+                        <div class="sticker-item">⭐</div>
+                        <div class="sticker-item">✨</div>
+                        <div class="sticker-item">🌟</div>
+                        <div class="sticker-item">🔥</div>
+                        <div class="sticker-item">💯</div>
+                        <div class="sticker-item">👑</div>
+                        <div class="sticker-item">🦋</div>
+                        <div class="sticker-item">🌈</div>
+                        <div class="sticker-item">🌸</div>
+                    </div>
+                </div>
+
+                <!-- Adjust Options -->
+                <div id="adjust-options" class="sub-tools-panel">
+                    <div class="adjustment-sliders">
+                        <div class="adjustment-row">
+                            <label>בהירות</label>
+                            <input type="range" id="adjust-brightness" min="-50" max="50" value="0">
+                            <span id="brightness-value" class="value-display">0</span>
+                        </div>
+                        <div class="adjustment-row">
+                            <label>ניגודיות</label>
+                            <input type="range" id="adjust-contrast" min="-50" max="50" value="0">
+                            <span id="contrast-value" class="value-display">0</span>
+                        </div>
+                        <div class="adjustment-row">
+                            <label>רוויה</label>
+                            <input type="range" id="adjust-saturation" min="-50" max="50" value="0">
+                            <span id="saturation-value" class="value-display">0</span>
+                        </div>
+                        <div class="adjustment-row">
+                            <label>חום</label>
+                            <input type="range" id="adjust-warmth" min="-50" max="50" value="0">
+                            <span id="warmth-value" class="value-display">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Tools -->
+            <div id="ai-tools" class="tools-container">
+                <div class="ai-tools-grid">
+                    <button class="ai-tool-btn" data-tool="enhance">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>שיפור אוטומטי</span>
+                    </button>
+                    <button class="ai-tool-btn" data-tool="style">
+                        <i class="fa-solid fa-palette"></i>
+                        <span>העברת סגנון</span>
+                    </button>
+                    <button class="ai-tool-btn" data-tool="background">
+                        <i class="fa-solid fa-image"></i>
+                        <span>החלפת רקע</span>
+                    </button>
+                    <button class="ai-tool-btn" data-tool="caption">
+                        <i class="fa-solid fa-comment-dots"></i>
+                        <span>כיתוב חכם</span>
+                    </button>
+                    <button class="ai-tool-btn" data-tool="mood">
+                        <i class="fa-solid fa-sun"></i>
+                        <span>אווירה צבעונית</span>
+                    </button>
+                    <button class="ai-tool-btn" data-tool="prompt">
+                        <i class="fa-solid fa-keyboard"></i>
+                        <span>עריכה בטקסט</span>
+                    </button>
+                </div>
+
+                <!-- Style Options -->
+                <div id="style-options" class="sub-tools-panel">
+                    <div class="style-grid">
+                        <button class="style-option" data-style="oil"
+                            style="background:linear-gradient(45deg,#8B4513,#D2691E)">
+                            <span>ציור שמן</span>
+                        </button>
+                        <button class="style-option" data-style="anime"
+                            style="background:linear-gradient(45deg,#ff69b4,#87ceeb)">
+                            <span>אנימה</span>
+                        </button>
+                        <button class="style-option" data-style="pixel"
+                            style="background:linear-gradient(45deg,#00ff00,#0000ff)">
+                            <span>פיקסל</span>
+                        </button>
+                        <button class="style-option" data-style="watercolor"
+                            style="background:linear-gradient(45deg,#add8e6,#ffe4e1)">
+                            <span>צבעי מים</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Background Options -->
+                <div id="background-options" class="sub-tools-panel">
+                    <div class="background-grid">
+                        <button class="background-option" data-bg="beach"
+                            style="background:linear-gradient(180deg,#87CEEB,#F0E68C)">
+                            <span>🏖️ חוף ים</span>
+                        </button>
+                        <button class="background-option" data-bg="space"
+                            style="background:linear-gradient(180deg,#1a1a2e,#000)">
+                            <span>🌌 חלל</span>
+                        </button>
+                        <button class="background-option" data-bg="forest"
+                            style="background:linear-gradient(180deg,#228B22,#006400)">
+                            <span>🌲 יער</span>
+                        </button>
+                        <button class="background-option" data-bg="city"
+                            style="background:linear-gradient(180deg,#708090,#2F4F4F)">
+                            <span>🌆 עיר</span>
+                        </button>
+                        <button class="background-option" data-bg="gradient"
+                            style="background:linear-gradient(135deg,#667eea,#764ba2)">
+                            <span>🎨 גרדיאנט</span>
+                        </button>
+                        <button class="background-option" data-bg="blur"
+                            style="background:rgba(0,0,0,0.3);backdrop-filter:blur(10px)">
+                            <span>🔮 טשטוש</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mood Options -->
+                <div id="mood-options" class="sub-tools-panel">
+                    <div class="style-grid">
+                        <button class="style-option" data-mood="warm"
+                            style="background:linear-gradient(45deg,#ff6b35,#ffa500)">
+                            <span>☀️ חם</span>
+                        </button>
+                        <button class="style-option" data-mood="cold"
+                            style="background:linear-gradient(45deg,#00bfff,#1e90ff)">
+                            <span>❄️ קר</span>
+                        </button>
+                        <button class="style-option" data-mood="dramatic"
+                            style="background:linear-gradient(45deg,#2c2c2c,#1a1a1a)">
+                            <span>🎭 דרמטי</span>
+                        </button>
+                        <button class="style-option" data-mood="romantic"
+                            style="background:linear-gradient(45deg,#ff69b4,#ff1493)">
+                            <span>💕 רומנטי</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- AI Prompt Input -->
+                <div class="ai-prompt-container">
+                    <textarea id="ai-prompt-input" class="ai-prompt-input"
+                        placeholder="תאר מה אתה רוצה לשנות בתמונה...&#10;דוגמה: &quot;תעשה את הצבעים יותר חיים ותוסיף זוהר רך&quot;"></textarea>
+                    <button id="ai-prompt-submit" class="ai-prompt-submit">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        הפעל AI
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Liquid Glass Navigation -->
     <nav class="glass-nav" id="main-nav">
         <!-- Standard Navigation Items -->
@@ -484,6 +778,7 @@
     <script src="js/games.js" defer></script>
     <script src="js/gallery.js" defer></script>
     <script src="js/camera.js" defer></script>
+    <script src="js/photo-editor.js" defer></script>
     <script src="js/app.js" defer></script>
     <script src="login-logic.js"></script>
 </body>
