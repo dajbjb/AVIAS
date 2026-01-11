@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>Kingdom Air Hockey</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@300;400;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- ═══════════════════════════════════════════════════════════════════
+         MENU SCREEN
+         ═══════════════════════════════════════════════════════════════════ -->
+    <div id="menuScreen" class="screen active">
+        <div class="menu-bg-gradient"></div>
+        <div class="floating-particles" id="menuParticles"></div>
+
+        <div class="menu-content">
+            <!-- Logo -->
+            <div class="logo-section">
+                <h1 class="logo-title">
+                    <span class="logo-crown">♔</span>
+                    <span class="logo-text">KINGDOM</span>
+                </h1>
+                <h2 class="logo-subtitle">Air Hockey</h2>
+                <div class="logo-tagline">Royal Edition</div>
+            </div>
+
+            <!-- Mode Selection -->
+            <div class="mode-selection">
+                <button class="royal-btn primary" id="btnVsPlayer">
+                    <span class="btn-icon">👥</span>
+                    <span class="btn-label">שני שחקנים</span>
+                    <span class="btn-desc">משחק מקומי</span>
+                </button>
+
+                <button class="royal-btn" id="btnVsAI">
+                    <span class="btn-icon">🤖</span>
+                    <span class="btn-label">נגד המחשב</span>
+                    <span class="btn-desc">בחר רמת קושי</span>
+                </button>
+            </div>
+
+            <!-- Difficulty Panel (Hidden by default) -->
+            <div class="difficulty-panel" id="difficultyPanel">
+                <h3 class="panel-title">בחר רמת קושי</h3>
+                <div class="difficulty-options">
+                    <button class="diff-btn" data-level="easy">
+                        <span class="diff-icon">🌸</span>
+                        <span class="diff-name">קל</span>
+                        <span class="diff-desc">רגוע ונעים</span>
+                    </button>
+                    <button class="diff-btn selected" data-level="medium">
+                        <span class="diff-icon">⚔️</span>
+                        <span class="diff-name">בינוני</span>
+                        <span class="diff-desc">אתגר הוגן</span>
+                    </button>
+                    <button class="diff-btn" data-level="hard">
+                        <span class="diff-icon">👑</span>
+                        <span class="diff-name">קשה</span>
+                        <span class="diff-desc">מלך המגרש</span>
+                    </button>
+                </div>
+                <button class="royal-btn gold" id="btnStartAI">התחל משחק</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         GAME SCREEN
+         ═══════════════════════════════════════════════════════════════════ -->
+    <div id="gameScreen" class="screen">
+        <!-- 3D Canvas Container -->
+        <div id="gameContainer"></div>
+
+        <!-- HUD Overlay -->
+        <div class="game-hud">
+            <!-- Top Player (Opponent) -->
+            <div class="hud-player top">
+                <div class="player-info">
+                    <span class="player-name" id="player2Name">שחקן 2</span>
+                    <span class="player-avatar">👑</span>
+                </div>
+                <div class="score-display" id="score2">0</div>
+            </div>
+
+            <!-- Center Info -->
+            <div class="hud-center">
+                <button class="hud-btn pause-btn" id="pauseBtn">⏸</button>
+            </div>
+
+            <!-- Bottom Player (You) -->
+            <div class="hud-player bottom">
+                <div class="score-display" id="score1">0</div>
+                <div class="player-info">
+                    <span class="player-avatar">💎</span>
+                    <span class="player-name">אתה</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Goal Animation Overlay -->
+        <div class="goal-flash" id="goalFlash"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         OVERLAY (Pause, Goal, Game Over)
+         ═══════════════════════════════════════════════════════════════════ -->
+    <div id="overlay" class="overlay">
+        <div class="overlay-backdrop"></div>
+        <div class="overlay-card">
+            <div class="overlay-icon" id="overlayIcon">⚽</div>
+            <h1 class="overlay-title" id="overlayTitle">GOAL!</h1>
+            <p class="overlay-subtitle" id="overlaySubtitle"></p>
+            <div class="overlay-score" id="overlayScore"></div>
+            <div class="overlay-actions">
+                <button class="royal-btn gold" id="overlayPrimaryBtn">המשך</button>
+                <button class="royal-btn outline" id="overlaySecondaryBtn">תפריט ראשי</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Engine -->
+    <script src="game.js"></script>
+</body>
+
+</html>

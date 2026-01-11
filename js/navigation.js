@@ -189,13 +189,19 @@ navItems.forEach(item => {
 
                     // Delay slightly to allow UI transition
                     setTimeout(() => {
-                        if (window.AppCamera && window.AppCamera.startSequence) {
-                            window.AppCamera.startSequence();
-                        } else if (typeof startCamera === 'function') {
-                            startCamera();
-                        } else {
-                            console.error("Nav: Camera start function not found!");
-                        }
+                        const startCam = () => {
+                            if (window.AppCamera && window.AppCamera.startSequence) {
+                                console.log("Nav: Starting camera via AppCamera");
+                                window.AppCamera.startSequence();
+                            } else if (typeof startCamera === 'function') {
+                                console.log("Nav: Starting camera via global startCamera");
+                                startCamera();
+                            } else {
+                                console.warn("Nav: Camera not ready, retrying in 100ms...");
+                                setTimeout(startCam, 100);
+                            }
+                        };
+                        startCam();
                         setNavMode('filters');
                     }, 50);
 
