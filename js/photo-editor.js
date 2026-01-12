@@ -65,20 +65,34 @@ class PhotoEditor {
     // ========================================
 
     bindCoreEvents() {
-        // Back
-        document.getElementById('editor-back-btn')?.addEventListener('click', () => this.close());
+        // Cancel / Back Button
+        document.getElementById('editor-cancel-btn')?.addEventListener('click', () => this.close());
 
-        // Save
+        // Save Button
         document.getElementById('editor-save-btn')?.addEventListener('click', () => this.save());
-
-        // Toolbar toggle
-        document.querySelector('.toolbar-handle')?.addEventListener('click', () => {
-            this.toolbar?.classList.toggle('collapsed');
-        });
 
         // Undo/Redo
         document.getElementById('editor-undo-btn')?.addEventListener('click', () => this.undo());
         document.getElementById('editor-redo-btn')?.addEventListener('click', () => this.redo());
+
+        // Toggle Toolbar (Clean View Logic)
+        const toggleBtn = document.getElementById('edit-toggle-btn');
+        const toolbar = document.getElementById('editor-bottom-toolbar');
+        const closeToolbarBtn = document.getElementById('close-toolbar-btn');
+
+        if (toggleBtn && toolbar) {
+            toggleBtn.addEventListener('click', () => {
+                toolbar.classList.add('active');
+                toggleBtn.classList.add('hidden');
+            });
+        }
+
+        if (closeToolbarBtn && toolbar && toggleBtn) {
+            closeToolbarBtn.addEventListener('click', () => {
+                toolbar.classList.remove('active');
+                toggleBtn.classList.remove('hidden');
+            });
+        }
 
         // Click on canvas to deselect elements
         this.canvas?.addEventListener('click', () => this.deselectAll());
@@ -86,9 +100,19 @@ class PhotoEditor {
 
 
     bindToolEvents() {
-        // Quick Tools
+        // Quick Tools - Click should also open toolbar if closed
         document.querySelectorAll('.quick-tool-btn').forEach(btn => {
-            btn.addEventListener('click', () => this.selectTool(btn.dataset.tool));
+            btn.addEventListener('click', () => {
+                const toolbar = document.querySelector('.editor-bottom-toolbar');
+                const toggleBtn = document.getElementById('edit-toggle-btn');
+
+                if (!toolbar.classList.contains('active')) {
+                    toolbar.classList.add('active');
+                    toggleBtn.classList.add('hidden');
+                }
+
+                this.selectTool(btn.dataset.tool);
+            });
         });
 
         // Filter Presets
@@ -137,14 +161,20 @@ class PhotoEditor {
             });
         });
 
-        // Adjustments
+        // Adjustments Touch Fix
         ['brightness', 'contrast', 'saturation', 'warmth'].forEach(adj => {
             const slider = document.getElementById(`adj-${adj}`);
-            slider?.addEventListener('input', (e) => {
-                this.adjustments[adj] = parseInt(e.target.value);
-                document.getElementById(`${adj}-val`).textContent = e.target.value;
-                this.renderCanvas();
-            });
+            if (slider) {
+                // Prevent drag of element when moving slider
+                slider.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: false });
+                slider.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false });
+
+                slider.addEventListener('input', (e) => {
+                    this.adjustments[adj] = parseInt(e.target.value);
+                    document.getElementById(`${adj}-val`).textContent = e.target.value;
+                    this.renderCanvas();
+                });
+            }
         });
 
         // AI Magic buttons
@@ -157,6 +187,70 @@ class PhotoEditor {
             const prompt = document.getElementById('ai-smart-prompt')?.value;
             if (prompt) this.processAIPrompt(prompt);
         });
+    }
+
+    open(imageSrc) {
+        if (!imageSrc) return;
+
+        // STOP CAMERA to save battery and performance
+        if (window.AppCamera && window.AppCamera.stopCamera) {
+            window.AppCamera.stopCamera();
+        } else {
+            // Fallback standard stop
+            const video = document.querySelector('video');
+            if (video && video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        // Show editor screen
+        if (this.screen) {
+            this.screen.style.display = 'flex';
+        }
+
+        // Reset state
+        this.elements = [];
+        this.history = [];
+        this.historyIndex = -1;
+        this.adjustments = { brightness: 0, contrast: 0, saturation: 0, warmth: 0 };
+        this.currentFilter = 'none';
+
+        // Load Image
+        this.originalImage = new Image();
+        this.originalImage.onload = () => {
+            this.resizeCanvas();
+            this.renderCanvas();
+            this.saveHistory();
+            this.updateHistoryButtons();
+        };
+        this.originalImage.src = imageSrc;
+
+        // Reset UI
+        this.updateSlidersUI();
+        this.updateFilterUI();
+        if (this.elementsLayer) this.elementsLayer.innerHTML = '';
+
+        // Show edit toggle button, hide toolbar initially
+        const toolbar = document.getElementById('editor-bottom-toolbar');
+        const toggleBtn = document.getElementById('edit-toggle-btn');
+        if (toolbar) toolbar.classList.remove('active');
+        if (toggleBtn) toggleBtn.classList.remove('hidden');
+    }
+
+    close() {
+        // Hide editor screen
+        if (this.screen) {
+            this.screen.style.display = 'none';
+        }
+
+        // Hide toolbar
+        const toolbar = document.getElementById('editor-bottom-toolbar');
+        if (toolbar) toolbar.classList.remove('active');
+
+        // RESTART CAMERA
+        if (window.AppCamera && window.AppCamera.startCamera) {
+            window.AppCamera.startCamera();
+        }
     }
 
     // ========================================
@@ -886,6 +980,293 @@ class PhotoEditor {
 
     hideLoading() {
         this.loadingOverlay?.classList.remove('active');
+    }
+    resizeCanvas() {
+        if (!this.originalImage) return;
+
+        const maxW = window.innerWidth;
+        const maxH = window.innerHeight * 0.8; // Leave space for UI
+
+        let w = this.originalImage.width;
+        let h = this.originalImage.height;
+
+        // Maintain aspect ratio
+        if (w > maxW || h > maxH) {
+            const ratio = Math.min(maxW / w, maxH / h);
+            w *= ratio;
+            h *= ratio;
+        }
+
+        if (this.canvas) {
+            this.canvas.width = w;
+            this.canvas.height = h;
+        }
+
+        // Also update elements layer size to match
+        if (this.elementsLayer) {
+            this.elementsLayer.style.width = w + 'px';
+            this.elementsLayer.style.height = h + 'px';
+        }
+    }
+
+    renderCanvas() {
+        if (!this.ctx || !this.originalImage) return;
+
+        // Clear
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Base Setup
+        this.ctx.save();
+
+        // Apply Filters via Context Filter (Modern Browsers)
+        const filterStr = this.filterPresets[this.currentFilter] || '';
+
+        // Manual adjustments convert to CSS filter strings
+        const brightness = 100 + (this.adjustments.brightness || 0);
+        const contrast = 100 + (this.adjustments.contrast || 0);
+        const saturate = 100 + (this.adjustments.saturation || 0);
+        const warmth = this.adjustments.warmth || 0;
+
+        // Warmth is tricky in canvas filter without heavy pixel manipulation
+        // We simulate warmth with Sepia + Hue Rotate
+        let adjustFilter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%)`;
+
+        if (warmth > 0) {
+            adjustFilter += ` sepia(${warmth * 0.5}%)`;
+        } else if (warmth < 0) {
+            adjustFilter += ` hue-rotate(${warmth * 0.5}deg)`;
+        }
+
+        const blur = this.adjustments.blur || 0;
+        if (blur > 0) adjustFilter += ` blur(${blur}px)`;
+
+        this.ctx.filter = `${filterStr} ${adjustFilter}`.trim();
+        if (this.ctx.filter === '') this.ctx.filter = 'none';
+
+        // Draw Image
+        this.ctx.drawImage(this.originalImage, 0, 0, this.canvas.width, this.canvas.height);
+
+        this.ctx.restore();
+    }
+
+    selectTool(toolName) {
+        // Switch Active Button
+        document.querySelectorAll('.quick-tool-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tool === toolName);
+        });
+
+        // Switch Panel
+        document.querySelectorAll('.tool-panel').forEach(panel => {
+            panel.classList.remove('active');
+            panel.style.display = 'none'; // Ensure hide
+        });
+
+        const activePanel = document.getElementById(`panel-${toolName}`);
+        if (activePanel) {
+            activePanel.style.display = 'block';
+            setTimeout(() => activePanel.classList.add('active'), 10);
+        }
+
+        // Ensure toolbar is expanded
+        const toolbar = document.querySelector('.editor-bottom-toolbar');
+        const toggleBtn = document.getElementById('edit-toggle-btn');
+        if (toolbar && !toolbar.classList.contains('active')) {
+            toolbar.classList.add('active');
+            if (toggleBtn) toggleBtn.classList.add('hidden');
+        }
+
+        // Special logic for My Stories
+        if (toolName === 'my-stories') {
+            this.loadMyStories();
+        }
+    }
+
+    loadMyStories() {
+        const list = document.getElementById('my-stories-list');
+        if (!list) return;
+        list.innerHTML = '<div style="color:#aaa; padding:20px;">טוען...</div>';
+
+        const currentUser = localStorage.getItem('kingdom_current_user') || 'Aviya';
+        const stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
+
+        // Filter my active stories
+        const now = Date.now();
+        const myStories = stories.filter(s => s.author === currentUser && (now - s.timestamp) < 5 * 60 * 60 * 1000);
+
+        list.innerHTML = '';
+        if (myStories.length === 0) {
+            list.innerHTML = '<div style="color:#aaa; padding:10px;">אין סטוריז פעילים כרגע.</div>';
+            return;
+        }
+
+        myStories.forEach(s => {
+            const item = document.createElement('div');
+            item.style.cssText = "position:relative; flex-shrink:0; width:80px; height:120px; border-radius:8px; overflow:hidden; border:1px solid #444;";
+
+            const img = document.createElement('img');
+            img.src = s.imageUrl;
+            img.style.cssText = "width:100%; height:100%; object-fit:cover;";
+
+            const delBtn = document.createElement('button');
+            delBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+            delBtn.style.cssText = "position:absolute; bottom:5px; right:5px; background:rgba(255,0,0,0.8); color:white; border:none; border-radius:50%; width:24px; height:24px; font-size:10px; cursor:pointer;";
+
+            delBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (confirm('למחוק?')) {
+                    if (typeof SyncManager !== 'undefined' && SyncManager.deleteStory) {
+                        SyncManager.deleteStory(s.id);
+                        this.loadMyStories(); // Reload
+                    } else {
+                        // Fallback local delete
+                        const newStories = stories.filter(x => x.id !== s.id);
+                        localStorage.setItem('kingdom_stories', JSON.stringify(newStories));
+                        this.loadMyStories();
+                    }
+                }
+            };
+
+            item.appendChild(img);
+            item.appendChild(delBtn);
+            list.appendChild(item);
+        });
+    }
+
+    applyFilter(filterName) {
+        this.currentFilter = filterName;
+
+        // Update UI
+        document.querySelectorAll('.filter-preset').forEach(p => {
+            p.classList.toggle('active', p.dataset.filter === filterName);
+        });
+
+        this.renderCanvas();
+        this.saveHistory();
+    }
+
+    addSticker(emoji) {
+        if (!emoji) return;
+        const container = this.elementsLayer;
+
+        const el = document.createElement('div');
+        el.className = 'draggable-element';
+
+        el.innerHTML = `
+            <span class="sticker-content">${emoji}</span>
+            <div class="resize-handle"></div>
+            <button class="delete-element-btn"><i class="fa-solid fa-times"></i></button>
+        `;
+
+        const x = (container.offsetWidth / 2) - 30;
+        const y = (container.offsetHeight / 2) - 30;
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+
+        container.appendChild(el);
+
+        const element = {
+            type: 'sticker',
+            content: emoji,
+            x: x,
+            y: y,
+            size: 60,
+            el: el
+        };
+        this.elements.push(element);
+
+        // Events
+        el.addEventListener('mousedown', (e) => this.startDrag(e, element));
+        el.addEventListener('touchstart', (e) => this.startDrag(e, element)); // Pass e directly
+
+        // Delete button
+        const delBtn = el.querySelector('.delete-element-btn');
+        delBtn.addEventListener('mousedown', (e) => e.stopPropagation());
+        delBtn.addEventListener('touchstart', (e) => e.stopPropagation());
+        delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.deleteElement(element);
+        });
+
+        this.deselectAll();
+        el.classList.add('selected');
+        this.selectedElement = element;
+        this.saveHistory();
+    }
+
+    applyAIMagic(action) {
+        this.showLoading('AI Magic בפעולה...');
+        setTimeout(() => {
+            switch (action) {
+                case 'enhance':
+                    this.adjustments.brightness = 10;
+                    this.adjustments.contrast = 15;
+                    this.adjustments.saturation = 10;
+                    break;
+                case 'warm':
+                    this.adjustments.warmth = 30;
+                    this.adjustments.saturation = 10;
+                    break;
+                case 'cool':
+                    this.adjustments.warmth = -30;
+                    this.adjustments.brightness = 5;
+                    break;
+                case 'dramatic':
+                    this.currentFilter = 'dramatic';
+                    this.adjustments.contrast = 25;
+                    break;
+            }
+            this.updateSlidersUI();
+            this.renderCanvas();
+            this.saveHistory();
+            this.hideLoading();
+            this.showToast('קסם הופעל! ✨');
+        }, 800);
+    }
+
+    updateSlidersUI() {
+        ['brightness', 'contrast', 'saturation', 'warmth'].forEach(adj => {
+            const slider = document.getElementById(`adj-${adj}`);
+            const val = document.getElementById(`${adj}-val`);
+            if (slider) slider.value = this.adjustments[adj];
+            if (val) val.textContent = this.adjustments[adj];
+        });
+    }
+
+    showToast(msg) {
+        // Create simple toast if not exists
+        let toast = document.getElementById('editor-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'editor-toast';
+            toast.style.cssText = "position:absolute; top:80px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:white; padding:10px 20px; border-radius:30px; z-index:2000; font-family:sans-serif; opacity:0; transition:opacity 0.3s; pointer-events:none; white-space:nowrap;";
+            this.screen.appendChild(toast);
+        }
+        toast.textContent = msg;
+        toast.style.opacity = 1;
+        setTimeout(() => { toast.style.opacity = 0; }, 3000);
+    }
+
+    async drawElementToCanvas(ctx, element) {
+        // Helper for saving
+        ctx.save();
+        const x = element.x;
+        const y = element.y;
+
+        // Assuming elements act as DOM overlays, we approximate their position on canvas
+        // Since canvas and overlay are 1:1, coords match.
+        if (element.type === 'image') return; // Not implemented yet
+
+        if (element.type === 'text') {
+            ctx.font = `bold ${element.size}px ${element.fontFamily || 'Arial'}`;
+            ctx.fillStyle = element.color || '#fff';
+            ctx.textBaseline = 'top';
+            ctx.fillText(element.content, x, y);
+        } else if (element.type === 'sticker') {
+            ctx.font = `${element.size}px Arial`;
+            ctx.textBaseline = 'top';
+            ctx.fillText(element.content, x, y);
+        }
+        ctx.restore();
     }
 }
 

@@ -204,9 +204,30 @@
 
                 <!-- Capture Button - OUTSIDE overlay for guaranteed visibility -->
                 <div class="capture-row">
+                    <!-- My Stories Button (Left of Capture) -->
+                    <button id="my-stories-camera-btn" class="camera-side-btn" title="הסטוריז שלי">
+                        <i class="fa-solid fa-layer-group"></i>
+                    </button>
+
                     <button id="capture-photo" class="main-capture-btn">
                         <div class="inner-circle"></div>
                     </button>
+
+                    <!-- Placeholder for symmetry (or gallery shortcut) -->
+                    <div class="camera-side-placeholder"></div>
+                </div>
+            </div>
+
+            <!-- My Stories Panel (Slides up from bottom) -->
+            <div id="my-stories-panel" class="my-stories-panel" style="display:none;">
+                <div class="my-stories-header">
+                    <h3>הסטוריז שלי</h3>
+                    <button id="close-my-stories-panel" class="close-panel-btn">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div id="my-stories-camera-list" class="my-stories-grid">
+                    <!-- Stories loaded via JS -->
                 </div>
             </div>
 
@@ -439,45 +460,42 @@
             <span class="loading-text">מעבד...</span>
         </div>
 
-        <!-- Top Bar -->
-        <div class="editor-top-bar">
-            <button id="editor-back-btn" class="editor-back-btn">
-                <i class="fa-solid fa-arrow-right"></i>
-            </button>
-            <h2 class="editor-title">עריכה</h2>
-            <button id="editor-save-btn" class="editor-save-btn">
-                <i class="fa-solid fa-check"></i> שמור
-            </button>
-        </div>
-
-        <!-- Preview Area -->
+        <!-- Preview Area (Full Screen Background) -->
         <div class="editor-preview-area">
             <div class="editor-canvas-container">
                 <canvas id="editor-canvas"></canvas>
-                <!-- Draggable elements go here -->
                 <div class="elements-layer"></div>
             </div>
+        </div>
 
-            <!-- Undo/Redo floating -->
-            <div class="undo-redo-bar">
-                <button id="editor-undo-btn" class="undo-redo-btn" disabled>
-                    <i class="fa-solid fa-rotate-left"></i>
+        <!-- Top Bar (Fixed, Always Visible) -->
+        <div class="editor-top-bar">
+            <div></div> <!-- Spacer for left side -->
+            <div class="editor-top-actions">
+                <button id="editor-cancel-btn" class="editor-cancel-btn">
+                    <i class="fa-solid fa-xmark"></i>
                 </button>
-                <button id="editor-redo-btn" class="undo-redo-btn" disabled>
-                    <i class="fa-solid fa-rotate-right"></i>
+                <button id="editor-save-btn" class="editor-save-btn">
+                    <i class="fa-solid fa-paper-plane"></i> STORY
                 </button>
             </div>
         </div>
 
-        <!-- Bottom Toolbar (Collapsible) -->
-        <div class="editor-bottom-toolbar">
-            <div class="toolbar-handle">
-                <div class="toolbar-handle-bar"></div>
-            </div>
+        <!-- Edit Toggle Button (Floating) -->
+        <button id="edit-toggle-btn" class="edit-toggle-btn">
+            <i class="fa-solid fa-sliders"></i> עריכה
+        </button>
+
+        <!-- Bottom Toolbar -->
+        <div id="editor-bottom-toolbar" class="editor-bottom-toolbar">
+            <!-- Close Button -->
+            <button id="close-toolbar-btn" class="close-toolbar-btn">
+                <i class="fa-solid fa-chevron-down"></i> סגור
+            </button>
 
             <!-- Quick Tools Row -->
             <div class="quick-tools-row">
-                <button class="quick-tool-btn" data-tool="filters">
+                <button class="quick-tool-btn active" data-tool="filters">
                     <i class="fa-solid fa-swatchbook"></i>
                     <span>פילטרים</span>
                 </button>
@@ -493,13 +511,13 @@
                     <i class="fa-solid fa-font"></i>
                     <span>טקסט</span>
                 </button>
-                <button class="quick-tool-btn" data-tool="ai">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    <span>AI</span>
+                <button class="quick-tool-btn" data-tool="my-stories">
+                    <i class="fa-solid fa-layer-group"></i>
+                    <span>הסטוריז שלי</span>
                 </button>
             </div>
 
-            <!-- Expanded Content -->
+            <!-- Tool Panels -->
             <div class="toolbar-expanded-content">
                 <!-- Filters Panel -->
                 <div id="panel-filters" class="tool-panel active">
@@ -526,15 +544,11 @@
                         </div>
                         <div class="filter-preset" data-filter="bw">
                             <div class="filter-preview"></div>
-                            <span>ש/ל</span>
+                            <span>שחור-לבן</span>
                         </div>
                         <div class="filter-preset" data-filter="dramatic">
                             <div class="filter-preview"></div>
                             <span>דרמטי</span>
-                        </div>
-                        <div class="filter-preset" data-filter="soft">
-                            <div class="filter-preview"></div>
-                            <span>רך</span>
                         </div>
                     </div>
                 </div>
@@ -558,7 +572,7 @@
                             <span id="saturation-val" class="adjust-value">0</span>
                         </div>
                         <div class="adjust-item">
-                            <label>חום</label>
+                            <label>חמימות</label>
                             <input type="range" id="adj-warmth" min="-50" max="50" value="0">
                             <span id="warmth-val" class="adjust-value">0</span>
                         </div>
@@ -568,110 +582,40 @@
                 <!-- Stickers Panel -->
                 <div id="panel-stickers" class="tool-panel">
                     <div class="stickers-scroll">
-                        <button class="sticker-btn" data-emoji="😀">😀</button>
-                        <button class="sticker-btn" data-emoji="😍">😍</button>
-                        <button class="sticker-btn" data-emoji="🥰">🥰</button>
-                        <button class="sticker-btn" data-emoji="😎">😎</button>
-                        <button class="sticker-btn" data-emoji="😘">😘</button>
                         <button class="sticker-btn" data-emoji="❤️">❤️</button>
-                        <button class="sticker-btn" data-emoji="💕">💕</button>
-                        <button class="sticker-btn" data-emoji="💖">💖</button>
-                        <button class="sticker-btn" data-emoji="⭐">⭐</button>
-                        <button class="sticker-btn" data-emoji="✨">✨</button>
+                        <button class="sticker-btn" data-emoji="😍">😍</button>
                         <button class="sticker-btn" data-emoji="🔥">🔥</button>
-                        <button class="sticker-btn" data-emoji="💯">💯</button>
-                        <button class="sticker-btn" data-emoji="👑">👑</button>
-                        <button class="sticker-btn" data-emoji="🦋">🦋</button>
-                        <button class="sticker-btn" data-emoji="🌈">🌈</button>
-                        <button class="sticker-btn" data-emoji="🌸">🌸</button>
+                        <button class="sticker-btn" data-emoji="✨">✨</button>
+                        <button class="sticker-btn" data-emoji="�">�</button>
+                        <button class="sticker-btn" data-emoji="🌟">🌟</button>
+                        <button class="sticker-btn" data-emoji="💕">💕</button>
+                        <button class="sticker-btn" data-emoji="">👑</button>
+                        <button class="sticker-btn" data-emoji="�">�</button>
+                        <button class="sticker-btn" data-emoji="💋">💋</button>
                     </div>
                 </div>
 
                 <!-- Text Panel -->
                 <div id="panel-text" class="tool-panel">
-                    <div class="text-tools-container">
-                        <div class="text-input-row">
-                            <input type="text" id="text-input-field" class="text-input-field" placeholder="הקלד טקסט..." dir="auto">
-                            <button id="add-text-btn" class="add-text-btn">הוסף</button>
-                        </div>
-                        <div class="text-style-options">
-                            <div class="font-scroll">
-                                <button class="font-btn active" data-font="Montserrat">Modern</button>
-                                <button class="font-btn" data-font="Playfair Display" style="font-family: 'Playfair Display'">Elegant</button>
-                                <button class="font-btn" data-font="Courier New" style="font-family: 'Courier New'">Retro</button>
-                                <button class="font-btn" data-font="Impact" style="font-family: 'Impact'">Bold</button>
-                                <button class="font-btn" data-font="Comic Sans MS" style="font-family: 'Comic Sans MS'">Fun</button>
-                            </div>
-                            <div class="color-scroll">
-                                <button class="color-btn active" data-color="#ffffff" style="background:#ffffff"></button>
-                                <button class="color-btn" data-color="#000000" style="background:#000000"></button>
-                                <button class="color-btn" data-color="#ff4444" style="background:#ff4444"></button>
-                                <button class="color-btn" data-color="#ffbb33" style="background:#ffbb33"></button>
-                                <button class="color-btn" data-color="#00c851" style="background:#00c851"></button>
-                                <button class="color-btn" data-color="#33b5e5" style="background:#33b5e5"></button>
-                                <button class="color-btn" data-color="#aa66cc" style="background:#aa66cc"></button>
-                            </div>
-                        </div>
+                    <div class="text-input-row">
+                        <input type="text" id="text-input-field" class="text-input-field" placeholder="הקלד טקסט..."
+                            dir="auto">
+                        <button id="add-text-btn" class="add-text-btn">הוסף</button>
                     </div>
                 </div>
 
-                <!-- AI Magic Panel -->
-                <div id="panel-ai" class="tool-panel">
-                    <div class="ai-controls">
-                        <div class="ai-prompt-box">
-                            <input type="text" id="ai-smart-prompt" class="ai-prompt-input" placeholder="תאר ל-AI איך לערוך... (למשל: תעשה את זה חורפי)" dir="auto">
-                            <button id="ai-run-prompt-btn" class="ai-run-btn"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
-                        </div>
-                        <div class="ai-magic-grid">
-                            <button class="ai-magic-btn" data-action="enhance">
-                                <i class="fa-solid fa-wand-magic"></i>
-                                <span>שיפור</span>
-                            </button>
-                            <button class="ai-magic-btn" data-action="warm">
-                                <i class="fa-solid fa-sun"></i>
-                                <span>חם</span>
-                            </button>
-                            <button class="ai-magic-btn" data-action="cool">
-                                <i class="fa-solid fa-snowflake"></i>
-                                <span>קר</span>
-                            </button>
-                            <button class="ai-magic-btn" data-action="dramatic">
-                                <i class="fa-solid fa-masks-theater"></i>
-                                <span>דרמטי</span>
-                            </button>
-                        </div>
+                <!-- My Stories Panel -->
+                <div id="panel-my-stories" class="tool-panel">
+                    <div style="text-align:center; color:#888; margin-bottom:10px; font-size:13px;">
+                        הסטוריז שהעלית (לחץ על פח למחיקה)
                     </div>
-                </div>
-                        <button class="ai-magic-btn" data-action="enhance">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i>
-                            <span>שיפור אוטומטי</span>
-                        </button>
-                        <button class="ai-magic-btn" data-action="warm">
-                            <i class="fa-solid fa-sun"></i>
-                            <span>גוון חם</span>
-                        </button>
-                        <button class="ai-magic-btn" data-action="cool">
-                            <i class="fa-solid fa-snowflake"></i>
-                            <span>גוון קר</span>
-                        </button>
-                        <button class="ai-magic-btn" data-action="dramatic">
-                            <i class="fa-solid fa-masks-theater"></i>
-                            <span>דרמטי</span>
-                        </button>
-                        <button class="ai-magic-btn" data-action="soft">
-                            <i class="fa-solid fa-cloud"></i>
-                            <span>רך וחלומי</span>
-                        </button>
-                        <button class="ai-magic-btn" data-action="vibrant">
-                            <i class="fa-solid fa-palette"></i>
-                            <span>צבעים חיים</span>
-                        </button>
+                    <div id="my-stories-list" style="display:flex; gap:12px; overflow-x:auto; padding:10px 5px;">
+                        <!-- Loaded via JS -->
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
 
 
 

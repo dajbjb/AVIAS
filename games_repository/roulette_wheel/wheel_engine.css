@@ -21,8 +21,12 @@ body {
     background-image: radial-gradient(circle at center, #1a100c 0%, #000000 100%);
     color: var(--text-primary);
     font-family: 'Playfair Display', serif;
-    height: 100vh;
-    overflow: hidden;
+    min-height: 100vh;
+    min-height: 100dvh;
+    /* Dynamic viewport height for mobile */
+    overflow-x: hidden;
+    overflow-y: auto;
+    /* Allow vertical scroll on mobile */
 }
 
 /* --- AMBIENT --- */
@@ -554,21 +558,107 @@ body {
     background: #fcf6ba;
 }
 
-/* Responsive */
+/* Responsive - Mobile First */
 @media (max-width: 768px) {
+    body {
+        overflow-y: auto;
+        padding-bottom: env(safe-area-inset-bottom, 20px);
+    }
+
+    .scene-scope {
+        position: relative;
+        min-height: auto;
+        padding: 80px 0 20px 0;
+    }
+
     .wheel-stage {
-        transform: rotateX(55deg) scale(0.6);
+        transform: rotateX(55deg) scale(0.55);
+        margin: 0 auto;
     }
 
+    .engine-header {
+        position: fixed;
+        top: 10px;
+        padding-top: env(safe-area-inset-top, 10px);
+    }
+
+    .logo-text {
+        font-size: 1.5rem;
+    }
+
+    .spin-trigger-btn {
+        bottom: -100px;
+        padding: 12px 40px;
+        font-size: 0.9rem;
+    }
+
+    /* Config Panel - Part of scroll flow on mobile */
     .config-panel {
-        width: 100%;
+        position: relative;
         top: auto;
-        bottom: 0;
-        transform: translateY(90%);
+        right: auto;
+        transform: none;
+        width: calc(100% - 40px);
+        max-width: 400px;
+        margin: 40px auto 20px auto;
+        max-height: none;
+        border-radius: 12px;
     }
 
-    .config-panel.active,
-    .config-panel:focus-within {
-        transform: translateY(0);
+    .config-panel.minimized {
+        transform: none;
+        max-height: 60px;
+        overflow: hidden;
+    }
+
+    .segments-list-container {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    /* Victory Modal - Always centered and visible */
+    .victory-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        padding: 20px;
+        padding-top: calc(20px + env(safe-area-inset-top, 0px));
+        padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+        overflow-y: auto;
+    }
+
+    .victory-card {
+        max-width: 90%;
+        width: 320px;
+        padding: 30px 20px;
+        margin: auto;
+    }
+
+    .victory-title {
+        font-size: 2rem;
+    }
+
+    .claim-btn {
+        width: 100%;
+        padding: 14px;
+    }
+}
+
+/* Extra small phones */
+@media (max-width: 380px) {
+    .wheel-stage {
+        transform: rotateX(55deg) scale(0.45);
+    }
+
+    .logo-text {
+        font-size: 1.2rem;
+    }
+
+    .sub-logo {
+        font-size: 0.6rem;
+        letter-spacing: 4px;
     }
 }

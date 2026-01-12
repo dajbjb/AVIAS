@@ -50,15 +50,51 @@ function showStoryAtIndex(index) {
     const img = document.getElementById('story-viewer-img');
     const text = document.getElementById('story-viewer-text');
     const bar = document.getElementById('story-progress-fill');
+    const viewer = document.getElementById('story-viewer');
 
     if (img && text && bar) {
-        // Reset state for instant transition
+        // Reset state
         bar.style.transition = 'none';
         bar.style.width = '0%';
 
+        // Check if I am the author
+        const currentUser = localStorage.getItem('kingdom_current_user') || 'Aviya';
+        const isMyStory = story.author === currentUser;
+
+        // Create or Update Delete Button
+        let delBtn = document.getElementById('story-delete-btn');
+        if (!delBtn) {
+            delBtn = document.createElement('button');
+            delBtn.id = 'story-delete-btn';
+            delBtn.className = 'story-delete-btn';
+            delBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+            // Styling logic (can be moved to CSS, but inline for safety here)
+            delBtn.style.cssText = "position:absolute; bottom:20px; right:20px; z-index:1001; background:rgba(255,0,0,0.6); border:none; color:white; padding:10px; border-radius:50%; width:40px; height:40px; cursor:pointer;";
+            viewer.appendChild(delBtn);
+        }
+
+        // Show/Hide Delete Button + Logic
+        delBtn.style.display = isMyStory ? 'block' : 'none';
+        delBtn.onclick = (e) => {
+            e.stopPropagation(); // Don't skip story
+            if (confirm('למחוק את הסטורי הזה?')) {
+                if (typeof SyncManager !== 'undefined' && SyncManager.deleteStory) {
+                    SyncManager.deleteStory(story.id);
+                }
+                // Remove from local list immediately
+                activeStoriesList.splice(index, 1);
+                if (activeStoriesList.length === 0) {
+                    closeStoryViewer();
+                } else {
+                    // Show next or prev
+                    showStoryAtIndex(Math.min(index, activeStoriesList.length - 1));
+                }
+            }
+        };
+
         // Load Content
         img.src = story.imageUrl;
-        text.textContent = story.text || "";
+        text.textContent = (story.caption || "") + (story.text || ""); // Check both properties
         img.className = (story.filter && story.filter !== 'none') ? `viewer-img filter-${story.filter}` : 'viewer-img';
 
         // Animate Bar
@@ -69,7 +105,7 @@ function showStoryAtIndex(index) {
             });
         });
 
-        // Timer
+        // Clear existing timer
         if (storyTimer) clearTimeout(storyTimer);
         storyTimer = setTimeout(nextStory, 5000);
     }
@@ -360,4 +396,86 @@ window.closeStoryViewer = function () {
 document.addEventListener('DOMContentLoaded', () => {
     const closeBtn = document.getElementById('close-viewer');
     if (closeBtn) closeBtn.addEventListener('click', window.closeStoryViewer);
+
+    // My Stories Camera Panel
+    const myStoriesBtn = document.getElementById('my-stories-camera-btn');
+    const myStoriesPanel = document.getElementById('my-stories-panel');
+    const closeMyStoriesBtn = document.getElementById('close-my-stories-panel');
+
+    if (myStoriesBtn && myStoriesPanel) {
+        myStoriesBtn.addEventListener('click', () => {
+            myStoriesPanel.style.display = 'block';
+            loadMyStoriesCamera();
+        });
+    }
+
+    if (closeMyStoriesBtn && myStoriesPanel) {
+        closeMyStoriesBtn.addEventListener('click', () => {
+            myStoriesPanel.style.display = 'none';
+        });
+    }
 });
+
+// Load My Stories in Camera Panel (current user only)
+function loadMyStoriesCamera() {
+    const list = document.getElementById('my-stories-camera-list');
+    if (!list) return;
+
+    list.innerHTML = '<div style="color:#aaa; padding:20px; text-align:center;">טוען...</div>';
+
+    const currentUser = localStorage.getItem('kingdom_current_user') || 'Aviya';
+    const stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
+
+    // Filter ONLY my stories (current user) and valid ones (5 hours)
+    const now = Date.now();
+    const validityPeriod = 5 * 60 * 60 * 1000;
+    const myStories = stories.filter(s => s.author === currentUser && (now - s.timestamp) < validityPeriod);
+
+    list.innerHTML = '';
+
+    if (myStories.length === 0) {
+        list.innerHTML = '<div style="color:#888; padding:20px; text-align:center;">אין לך סטוריז פעילים כרגע</div>';
+        return;
+    }
+
+    myStories.forEach(story => {
+        const item = document.createElement('div');
+        item.className = 'my-story-item';
+
+        const img = document.createElement('img');
+        img.src = story.imageUrl;
+        img.alt = 'Story';
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'my-story-delete-btn';
+        delBtn.innerHTML = '<i class="fa-solid fa-trash"></i> מחק';
+
+        delBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (confirm('למחוק את הסטורי?')) {
+                deleteMyStory(story.id || story.timestamp);
+                loadMyStoriesCamera(); // Refresh
+            }
+        };
+
+        item.appendChild(img);
+        item.appendChild(delBtn);
+        list.appendChild(item);
+    });
+}
+
+// Delete Story Function
+function deleteMyStory(storyId) {
+    // Use SyncManager if available (for cloud sync)
+    if (typeof SyncManager !== 'undefined' && SyncManager.deleteStory) {
+        SyncManager.deleteStory(storyId);
+    } else {
+        // Local fallback
+        let stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
+        stories = stories.filter(s => s.id !== storyId && s.timestamp !== storyId);
+        localStorage.setItem('kingdom_stories', JSON.stringify(stories));
+    }
+
+    // Refresh status rings if function exists
+    if (typeof renderStatusRings === 'function') renderStatusRings();
+}
