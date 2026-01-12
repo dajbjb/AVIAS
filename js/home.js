@@ -401,10 +401,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const myStoriesBtn = document.getElementById('my-stories-camera-btn');
     const myStoriesPanel = document.getElementById('my-stories-panel');
     const closeMyStoriesBtn = document.getElementById('close-my-stories-panel');
+    const mainNav = document.getElementById('main-nav');
 
     if (myStoriesBtn && myStoriesPanel) {
         myStoriesBtn.addEventListener('click', () => {
             myStoriesPanel.style.display = 'block';
+            // Hide nav bar so it doesn't cover content
+            if (mainNav) mainNav.style.display = 'none';
             loadMyStoriesCamera();
         });
     }
@@ -412,6 +415,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (closeMyStoriesBtn && myStoriesPanel) {
         closeMyStoriesBtn.addEventListener('click', () => {
             myStoriesPanel.style.display = 'none';
+            // Show nav bar again
+            if (mainNav) mainNav.style.display = '';
         });
     }
 });

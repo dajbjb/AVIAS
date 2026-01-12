@@ -228,24 +228,34 @@
 /* Delete Button on Element */
 .delete-element-btn {
     position: absolute;
-    top: -12px;
-    left: -12px;
-    width: 28px;
-    height: 28px;
+    top: -15px;
+    right: -15px;
+    width: 36px;
+    height: 36px;
     background: #ff4444;
     border-radius: 50%;
-    border: none;
+    border: 2px solid white;
     color: #fff;
-    font-size: 14px;
+    font-size: 16px;
     cursor: pointer;
     display: none;
     align-items: center;
     justify-content: center;
+    z-index: 100;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+    /* Bigger touch target for mobile */
+    touch-action: manipulation;
 }
 
 .draggable-element.selected .delete-element-btn {
     display: flex;
 }
+
+.delete-element-btn:active {
+    transform: scale(0.9);
+    background: #cc0000;
+}
+
 
 /* Undo/Redo - Floating Top Left */
 .undo-redo-bar {
@@ -504,36 +514,141 @@
 }
 
 /* ========================================
-   TEXT INPUT
+   TEXT PANEL (Instagram Style)
    ======================================== */
-.text-input-row {
+.text-panel-section {
+    margin-bottom: 15px;
+    direction: rtl;
+}
+
+.section-label {
+    display: block;
+    color: #888;
+    font-size: 12px;
+    margin-bottom: 8px;
+    padding-right: 5px;
+}
+
+/* Fonts Scroll */
+.fonts-scroll {
     display: flex;
     gap: 10px;
-    padding: 10px 0;
+    overflow-x: auto;
+    padding: 5px 0;
+    -webkit-overflow-scrolling: touch;
 }
 
-.text-input-field {
-    flex: 1;
+.font-option {
+    flex-shrink: 0;
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
     background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 12px;
-    padding: 12px 15px;
+    border: 2px solid transparent;
     color: #fff;
-    font-size: 16px;
-}
-
-.text-input-field::placeholder {
-    color: rgba(255, 255, 255, 0.4);
-}
-
-.add-text-btn {
-    background: #d4af37;
-    border: none;
-    border-radius: 12px;
-    padding: 0 20px;
-    color: #000;
-    font-weight: 600;
+    font-size: 18px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.font-option.active {
+    border-color: #FFD700;
+    background: rgba(255, 215, 0, 0.2);
+}
+
+/* Colors Scroll */
+.colors-scroll {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 5px 0;
+    -webkit-overflow-scrolling: touch;
+}
+
+.color-option {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.color-option.active {
+    border-color: #FFD700;
+    transform: scale(1.1);
+}
+
+/* Size Slider */
+.size-slider {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    margin-top: 5px;
+}
+
+.size-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px;
+    height: 24px;
+    background: #FFD700;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/* Delete Text Button */
+.delete-text-btn {
+    width: 100%;
+    padding: 12px;
+    background: rgba(255, 50, 50, 0.3);
+    border: 1px solid rgba(255, 50, 50, 0.5);
+    border-radius: 12px;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.delete-text-btn:active {
+    background: rgba(255, 50, 50, 0.6);
+}
+
+/* Editable Text Element */
+.editable-text {
+    position: absolute;
+    min-width: 50px;
+    min-height: 30px;
+    padding: 10px 15px;
+    background: transparent;
+    border: 2px dashed transparent;
+    color: white;
+    font-size: 32px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    cursor: move;
+    pointer-events: auto;
+    user-select: none;
+    touch-action: none;
+    outline: none;
+    text-align: center;
+}
+
+.editable-text:focus {
+    border-color: #FFD700;
+}
+
+.editable-text.selected {
+    border-color: #FFD700;
 }
 
 /* ========================================
@@ -637,4 +752,493 @@
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* ========================================
+   EDITOR GLASS NAV (New Design)
+   ======================================== */
+.editor-glass-nav {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(18, 18, 18, 0.95);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border-radius: 30px;
+    padding: 8px 15px;
+    z-index: 1500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Nav Views - morphing content */
+.editor-nav-view {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    animation: morphIn 0.3s ease-out;
+}
+
+.editor-nav-view.active {
+    display: flex;
+}
+
+@keyframes morphIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Main tool items */
+.editor-nav-item {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.editor-nav-item:active {
+    transform: scale(0.9);
+    background: rgba(212, 175, 55, 0.2);
+    color: #FFD700;
+}
+
+/* Back button */
+.editor-nav-back {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 10px;
+    flex-shrink: 0;
+}
+
+.editor-nav-back:active {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Scrollable content */
+.editor-nav-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 70vw;
+    padding: 5px 0;
+}
+
+.editor-nav-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+/* Filter items */
+.editor-filter-item {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid transparent;
+    border-radius: 20px;
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.editor-filter-item.active {
+    background: rgba(212, 175, 55, 0.3);
+    border-color: #FFD700;
+    color: #FFD700;
+}
+
+/* Adjust controls in nav */
+.editor-adjust-controls {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    max-width: 65vw;
+}
+
+.adjust-mini {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.adjust-mini span {
+    font-size: 16px;
+}
+
+.adjust-mini input[type="range"] {
+    width: 60px;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+}
+
+.adjust-mini input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #FFD700;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/* Color circles */
+.color-circle {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+}
+
+.color-circle.active {
+    border-color: #FFD700;
+    transform: scale(1.15);
+}
+
+/* Font circles */
+.font-circle {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid transparent;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.font-circle.active {
+    border-color: #FFD700;
+    background: rgba(212, 175, 55, 0.2);
+}
+
+/* Divider */
+.editor-nav-scroll .divider {
+    width: 1px;
+    height: 30px;
+    background: rgba(255, 255, 255, 0.2);
+    margin: 0 5px;
+    flex-shrink: 0;
+}
+
+/* My Stories in nav */
+.story-mini-item {
+    position: relative;
+    flex-shrink: 0;
+    width: 50px;
+    height: 70px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.story-mini-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.story-mini-delete {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
+    background: rgba(255, 0, 0, 0.8);
+    border: none;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ========================================
+   TEXT TOOLBAR (Secondary)
+   ======================================== */
+.text-toolbar {
+    position: fixed;
+    bottom: 110px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(25, 25, 25, 0.98);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border-radius: 20px;
+    padding: 12px 15px;
+    z-index: 1400;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 -5px 30px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    max-width: 90vw;
+}
+
+.text-toolbar.active {
+    display: flex;
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.text-toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Add text button */
+.text-add-btn {
+    flex: 1;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    border: none;
+    border-radius: 12px;
+    color: #000;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.text-add-btn:active {
+    transform: scale(0.95);
+}
+
+/* Delete button */
+.text-delete-btn {
+    width: 44px;
+    height: 44px;
+    background: rgba(255, 50, 50, 0.3);
+    border: 1px solid rgba(255, 50, 50, 0.5);
+    border-radius: 12px;
+    color: #ff6b6b;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.text-delete-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.text-delete-btn:not(:disabled):active {
+    background: rgba(255, 50, 50, 0.6);
+}
+
+/* Colors scroll */
+.text-colors-scroll {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 5px 0;
+}
+
+.txt-color {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+}
+
+.txt-color.active {
+    border-color: #FFD700;
+    transform: scale(1.15);
+}
+
+/* Fonts scroll */
+.text-fonts-scroll {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 5px 0;
+}
+
+.txt-font {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.txt-font.active {
+    border-color: #FFD700;
+    background: rgba(255, 215, 0, 0.2);
+}
+
+/* Size slider */
+.size-label {
+    color: #888;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.txt-size-slider {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+}
+
+.txt-size-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #FFD700;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.size-val {
+    color: #FFD700;
+    font-size: 12px;
+    min-width: 25px;
+    text-align: center;
+}
+
+/* ========================================
+   DRAGGABLE TEXT ELEMENT (Improved)
+   ======================================== */
+.text-element {
+    position: absolute;
+    min-width: 60px;
+    min-height: 30px;
+    padding: 8px 12px;
+    background: transparent;
+    border: 2px dashed transparent;
+    color: white;
+    font-size: 32px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    cursor: move;
+    user-select: none;
+    touch-action: none;
+    outline: none;
+    text-align: center;
+    word-break: break-word;
+    z-index: 10;
+}
+
+.text-element.selected {
+    border-color: #FFD700;
+}
+
+.text-element:focus {
+    border-color: #FFD700;
+    cursor: text;
+}
+
+/* Resize handle for text */
+.text-element .resize-handle {
+    position: absolute;
+    bottom: -8px;
+    right: -8px;
+    width: 20px;
+    height: 20px;
+    background: #FFD700;
+    border-radius: 50%;
+    cursor: se-resize;
+    display: none;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+}
+
+.text-element.selected .resize-handle {
+    display: block;
+}
+
+/* Delete handle for text - Always visible and big for touch */
+.text-element .delete-handle {
+    position: absolute;
+    top: -14px;
+    right: -14px;
+    width: 32px;
+    height: 32px;
+    background: #ff4444;
+    border: 3px solid white;
+    border-radius: 50%;
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+    touch-action: manipulation;
+    z-index: 100;
+}
+
+.text-element .delete-handle:active {
+    transform: scale(0.9);
+    background: #cc0000;
+}
+
+.text-element.selected .delete-handle {
+    display: flex;
 }

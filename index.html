@@ -482,137 +482,133 @@
         </div>
 
         <!-- Edit Toggle Button (Floating) -->
-        <button id="edit-toggle-btn" class="edit-toggle-btn">
-            <i class="fa-solid fa-sliders"></i> עריכה
-        </button>
-
-        <!-- Bottom Toolbar -->
-        <div id="editor-bottom-toolbar" class="editor-bottom-toolbar">
-            <!-- Close Button -->
-            <button id="close-toolbar-btn" class="close-toolbar-btn">
-                <i class="fa-solid fa-chevron-down"></i> סגור
-            </button>
-
-            <!-- Quick Tools Row -->
-            <div class="quick-tools-row">
-                <button class="quick-tool-btn active" data-tool="filters">
+        <!-- Editor Glass Nav (Like Main Nav) -->
+        <nav class="editor-glass-nav" id="editor-nav">
+            <!-- Main Tools View -->
+            <div class="editor-nav-view active" id="editor-main-tools">
+                <button class="editor-nav-item" data-editor-tool="filters">
                     <i class="fa-solid fa-swatchbook"></i>
-                    <span>פילטרים</span>
                 </button>
-                <button class="quick-tool-btn" data-tool="adjust">
+                <button class="editor-nav-item" data-editor-tool="adjust">
                     <i class="fa-solid fa-sliders"></i>
-                    <span>התאמות</span>
                 </button>
-                <button class="quick-tool-btn" data-tool="stickers">
-                    <i class="fa-solid fa-face-smile"></i>
-                    <span>מדבקות</span>
-                </button>
-                <button class="quick-tool-btn" data-tool="text">
+                <button class="editor-nav-item" data-editor-tool="text" id="text-tool-btn">
                     <i class="fa-solid fa-font"></i>
-                    <span>טקסט</span>
                 </button>
-                <button class="quick-tool-btn" data-tool="my-stories">
+                <button class="editor-nav-item" data-editor-tool="my-stories">
                     <i class="fa-solid fa-layer-group"></i>
-                    <span>הסטוריז שלי</span>
                 </button>
             </div>
 
-            <!-- Tool Panels -->
-            <div class="toolbar-expanded-content">
-                <!-- Filters Panel -->
-                <div id="panel-filters" class="tool-panel active">
-                    <div class="filters-grid">
-                        <div class="filter-preset active" data-filter="none">
-                            <div class="filter-preview"></div>
-                            <span>מקורי</span>
-                        </div>
-                        <div class="filter-preset" data-filter="vivid">
-                            <div class="filter-preview"></div>
-                            <span>חי</span>
-                        </div>
-                        <div class="filter-preset" data-filter="warm">
-                            <div class="filter-preview"></div>
-                            <span>חם</span>
-                        </div>
-                        <div class="filter-preset" data-filter="cool">
-                            <div class="filter-preview"></div>
-                            <span>קר</span>
-                        </div>
-                        <div class="filter-preset" data-filter="vintage">
-                            <div class="filter-preview"></div>
-                            <span>וינטג'</span>
-                        </div>
-                        <div class="filter-preset" data-filter="bw">
-                            <div class="filter-preview"></div>
-                            <span>שחור-לבן</span>
-                        </div>
-                        <div class="filter-preset" data-filter="dramatic">
-                            <div class="filter-preview"></div>
-                            <span>דרמטי</span>
-                        </div>
-                    </div>
+            <!-- Filters View -->
+            <div class="editor-nav-view" id="editor-filters-view">
+                <button class="editor-nav-back" id="filters-back">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+                <div class="editor-nav-scroll">
+                    <button class="editor-filter-item active" data-filter="none">מקורי</button>
+                    <button class="editor-filter-item" data-filter="vivid">חי</button>
+                    <button class="editor-filter-item" data-filter="warm">חם</button>
+                    <button class="editor-filter-item" data-filter="cool">קר</button>
+                    <button class="editor-filter-item" data-filter="vintage">וינטג'</button>
+                    <button class="editor-filter-item" data-filter="bw">שחור-לבן</button>
+                    <button class="editor-filter-item" data-filter="dramatic">דרמטי</button>
                 </div>
+            </div>
 
-                <!-- Adjustments Panel -->
-                <div id="panel-adjust" class="tool-panel">
-                    <div class="adjustment-list">
-                        <div class="adjust-item">
-                            <label>בהירות</label>
-                            <input type="range" id="adj-brightness" min="-50" max="50" value="0">
-                            <span id="brightness-val" class="adjust-value">0</span>
-                        </div>
-                        <div class="adjust-item">
-                            <label>ניגודיות</label>
-                            <input type="range" id="adj-contrast" min="-50" max="50" value="0">
-                            <span id="contrast-val" class="adjust-value">0</span>
-                        </div>
-                        <div class="adjust-item">
-                            <label>רוויה</label>
-                            <input type="range" id="adj-saturation" min="-50" max="50" value="0">
-                            <span id="saturation-val" class="adjust-value">0</span>
-                        </div>
-                        <div class="adjust-item">
-                            <label>חמימות</label>
-                            <input type="range" id="adj-warmth" min="-50" max="50" value="0">
-                            <span id="warmth-val" class="adjust-value">0</span>
-                        </div>
+            <!-- Adjustments View -->
+            <div class="editor-nav-view" id="editor-adjust-view">
+                <button class="editor-nav-back" id="adjust-back">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+                <div class="editor-adjust-controls">
+                    <div class="adjust-mini">
+                        <span>☀️</span>
+                        <input type="range" id="adj-brightness" min="-50" max="50" value="0">
+                    </div>
+                    <div class="adjust-mini">
+                        <span>◐</span>
+                        <input type="range" id="adj-contrast" min="-50" max="50" value="0">
+                    </div>
+                    <div class="adjust-mini">
+                        <span>🎨</span>
+                        <input type="range" id="adj-saturation" min="-50" max="50" value="0">
+                    </div>
+                    <div class="adjust-mini">
+                        <span>🔥</span>
+                        <input type="range" id="adj-warmth" min="-50" max="50" value="0">
                     </div>
                 </div>
+            </div>
 
-                <!-- Stickers Panel -->
-                <div id="panel-stickers" class="tool-panel">
-                    <div class="stickers-scroll">
-                        <button class="sticker-btn" data-emoji="❤️">❤️</button>
-                        <button class="sticker-btn" data-emoji="😍">😍</button>
-                        <button class="sticker-btn" data-emoji="🔥">🔥</button>
-                        <button class="sticker-btn" data-emoji="✨">✨</button>
-                        <button class="sticker-btn" data-emoji="�">�</button>
-                        <button class="sticker-btn" data-emoji="🌟">🌟</button>
-                        <button class="sticker-btn" data-emoji="💕">💕</button>
-                        <button class="sticker-btn" data-emoji="">👑</button>
-                        <button class="sticker-btn" data-emoji="�">�</button>
-                        <button class="sticker-btn" data-emoji="💋">💋</button>
-                    </div>
-                </div>
+            <!-- Text View (just shows hint) -->
+            <div class="editor-nav-view" id="editor-text-view">
+                <button class="editor-nav-back" id="text-back">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+                <span style="color:#aaa; font-size:12px;">לחץ על "הוסף טקסט" למעלה</span>
+            </div>
 
-                <!-- Text Panel -->
-                <div id="panel-text" class="tool-panel">
-                    <div class="text-input-row">
-                        <input type="text" id="text-input-field" class="text-input-field" placeholder="הקלד טקסט..."
-                            dir="auto">
-                        <button id="add-text-btn" class="add-text-btn">הוסף</button>
-                    </div>
+            <!-- My Stories View -->
+            <div class="editor-nav-view" id="editor-mystories-view">
+                <button class="editor-nav-back" id="mystories-back">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+                <div class="editor-nav-scroll" id="my-stories-list">
+                    <!-- Loaded via JS -->
+                    <span style="color:#888; font-size:12px;">טוען...</span>
                 </div>
+            </div>
+        </nav>
 
-                <!-- My Stories Panel -->
-                <div id="panel-my-stories" class="tool-panel">
-                    <div style="text-align:center; color:#888; margin-bottom:10px; font-size:13px;">
-                        הסטוריז שהעלית (לחץ על פח למחיקה)
-                    </div>
-                    <div id="my-stories-list" style="display:flex; gap:12px; overflow-x:auto; padding:10px 5px;">
-                        <!-- Loaded via JS -->
-                    </div>
+        <!-- TEXT TOOLBAR (Secondary - appears above main nav) -->
+        <div class="text-toolbar" id="text-toolbar">
+            <div class="text-toolbar-row">
+                <!-- Add New Text Button -->
+                <button class="text-add-btn" id="add-new-text-btn">
+                    <i class="fa-solid fa-plus"></i> הוסף טקסט
+                </button>
+
+                <!-- Delete Selected -->
+                <button class="text-delete-btn" id="delete-text-btn" disabled>
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+
+            <!-- Colors Row -->
+            <div class="text-toolbar-row">
+                <div class="text-colors-scroll">
+                    <button class="txt-color active" data-color="#FFFFFF" style="background:#FFFFFF"></button>
+                    <button class="txt-color" data-color="#000000" style="background:#000000"></button>
+                    <button class="txt-color" data-color="#FF0000" style="background:#FF0000"></button>
+                    <button class="txt-color" data-color="#FF6B6B" style="background:#FF6B6B"></button>
+                    <button class="txt-color" data-color="#FFD700" style="background:#FFD700"></button>
+                    <button class="txt-color" data-color="#4CAF50" style="background:#4CAF50"></button>
+                    <button class="txt-color" data-color="#00BCD4" style="background:#00BCD4"></button>
+                    <button class="txt-color" data-color="#2196F3" style="background:#2196F3"></button>
+                    <button class="txt-color" data-color="#9C27B0" style="background:#9C27B0"></button>
+                    <button class="txt-color" data-color="#E91E63" style="background:#E91E63"></button>
                 </div>
+            </div>
+
+            <!-- Fonts Row -->
+            <div class="text-toolbar-row">
+                <div class="text-fonts-scroll">
+                    <button class="txt-font active" data-font="Arial">Aa</button>
+                    <button class="txt-font" data-font="Georgia" style="font-family:Georgia">Aa</button>
+                    <button class="txt-font" data-font="Impact" style="font-family:Impact">Aa</button>
+                    <button class="txt-font" data-font="'Times New Roman'"
+                        style="font-family:'Times New Roman'">Aa</button>
+                    <button class="txt-font" data-font="'Courier New'" style="font-family:'Courier New'">Aa</button>
+                    <button class="txt-font" data-font="Verdana" style="font-family:Verdana">Aa</button>
+                </div>
+            </div>
+
+            <!-- Size Slider -->
+            <div class="text-toolbar-row">
+                <span class="size-label">גודל:</span>
+                <input type="range" id="txt-size-slider" min="16" max="80" value="32" class="txt-size-slider">
+                <span id="txt-size-val" class="size-val">32</span>
             </div>
         </div>
     </div>

@@ -50,6 +50,11 @@ class PhotoEditor {
             hdr: 'contrast(1.3) saturate(1.3) brightness(1.05)'
         };
 
+        // Text styling defaults
+        this.currentTextFont = 'Arial';
+        this.currentTextColor = '#FFFFFF';
+        this.currentTextSize = 32;
+
         this.init();
     }
 
@@ -57,6 +62,7 @@ class PhotoEditor {
         this.bindCoreEvents();
         this.bindToolEvents();
         this.bindDragEvents();
+        this.bindTextToolbarEvents();
         console.log('PhotoEditor V2: Ready');
     }
 
@@ -115,50 +121,85 @@ class PhotoEditor {
             });
         });
 
-        // Filter Presets
+        // Filter Presets (with touch support for iOS)
         document.querySelectorAll('.filter-preset').forEach(preset => {
             preset.addEventListener('click', () => this.applyFilter(preset.dataset.filter));
+            preset.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                this.applyFilter(preset.dataset.filter);
+            });
         });
 
-        // Stickers
+        // Stickers (with touch support - prevent double firing)
         document.querySelectorAll('.sticker-btn').forEach(btn => {
-            btn.addEventListener('click', () => this.addSticker(btn.dataset.emoji));
+            let touchHandled = false;
+
+            btn.addEventListener('touchstart', () => {
+                touchHandled = true;
+            });
+
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                if (touchHandled) {
+                    this.addSticker(btn.dataset.emoji);
+                    touchHandled = false;
+                }
+            });
+
+            btn.addEventListener('click', (e) => {
+                // Only fire click if touch didn't already handle it
+                if (!touchHandled) {
+                    this.addSticker(btn.dataset.emoji);
+                }
+                touchHandled = false;
+            });
         });
 
-        // Add Text
-        document.getElementById('add-text-btn')?.addEventListener('click', () => {
-            const input = document.getElementById('text-input-field');
-            if (input?.value) {
-                this.addText(input.value);
-                input.value = '';
+        // Text Tool - Create inline editable text when clicking "text" tool
+        document.getElementById('text-tool-btn')?.addEventListener('click', () => {
+            this.createEditableText();
+        });
+
+        // Font Selection (new style)
+        document.querySelectorAll('.font-option').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.font-option').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.currentTextFont = btn.dataset.font;
+                if (this.selectedElement && this.selectedElement.type === 'text') {
+                    this.selectedElement.fontFamily = btn.dataset.font;
+                    this.selectedElement.el.style.fontFamily = btn.dataset.font;
+                }
+            });
+        });
+
+        // Color Selection (new style)
+        document.querySelectorAll('.color-option').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.color-option').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.currentTextColor = btn.dataset.color;
+                if (this.selectedElement && this.selectedElement.type === 'text') {
+                    this.selectedElement.color = btn.dataset.color;
+                    this.selectedElement.el.style.color = btn.dataset.color;
+                }
+            });
+        });
+
+        // Size Slider
+        document.getElementById('text-size-slider')?.addEventListener('input', (e) => {
+            this.currentTextSize = parseInt(e.target.value);
+            if (this.selectedElement && this.selectedElement.type === 'text') {
+                this.selectedElement.size = this.currentTextSize;
+                this.selectedElement.el.style.fontSize = this.currentTextSize + 'px';
             }
         });
 
-        // Font Selection
-        document.querySelectorAll('.font-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.font-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                if (this.selectedElement && this.selectedElement.type === 'text') {
-                    this.selectedElement.fontFamily = btn.dataset.font;
-                    this.saveHistory();
-                    this.renderCanvas(); // Or update DOM element direct
-                    this.updateElementStyle(this.selectedElement);
-                }
-            });
-        });
-
-        // Color Selection
-        document.querySelectorAll('.color-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                if (this.selectedElement && this.selectedElement.type === 'text') {
-                    this.selectedElement.color = btn.dataset.color;
-                    this.saveHistory();
-                    this.updateElementStyle(this.selectedElement);
-                }
-            });
+        // Delete Selected Text Button
+        document.getElementById('delete-selected-text')?.addEventListener('click', () => {
+            if (this.selectedElement && this.selectedElement.type === 'text') {
+                this.deleteElement(this.selectedElement);
+            }
         });
 
         // Adjustments Touch Fix
@@ -186,6 +227,418 @@ class PhotoEditor {
         document.getElementById('ai-run-prompt-btn')?.addEventListener('click', () => {
             const prompt = document.getElementById('ai-smart-prompt')?.value;
             if (prompt) this.processAIPrompt(prompt);
+        });
+
+        // =====================
+        // NEW GLASS NAV BINDINGS
+        // =====================
+
+        // Main tool items -> switch to that view
+        document.querySelectorAll('.editor-nav-item').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tool = btn.dataset.editorTool;
+                this.showEditorView(tool);
+
+                // Special actions
+                if (tool === 'my-stories') {
+                    this.loadMyStoriesNav();
+                }
+                // Text tool just opens the toolbar, user clicks "add text" button
+            });
+        });
+
+        // Back buttons
+        ['filters-back', 'adjust-back', 'text-back', 'mystories-back'].forEach(id => {
+            document.getElementById(id)?.addEventListener('click', () => {
+                this.showEditorView('main');
+            });
+        });
+
+        // Filter items in new nav
+        document.querySelectorAll('.editor-filter-item').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.editor-filter-item').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.applyFilter(btn.dataset.filter);
+            });
+        });
+
+        // Color circles in new nav
+        document.querySelectorAll('.color-circle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.color-circle').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.currentTextColor = btn.dataset.color;
+                if (this.selectedElement && this.selectedElement.type === 'text') {
+                    this.selectedElement.el.style.color = btn.dataset.color;
+                }
+            });
+        });
+
+        // Font circles in new nav
+        document.querySelectorAll('.font-circle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.font-circle').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.currentTextFont = btn.dataset.font;
+                if (this.selectedElement && this.selectedElement.type === 'text') {
+                    this.selectedElement.el.style.fontFamily = btn.dataset.font;
+                }
+            });
+        });
+    }
+
+    // Show editor nav view with morphing
+    showEditorView(viewName) {
+        const views = {
+            'main': 'editor-main-tools',
+            'filters': 'editor-filters-view',
+            'adjust': 'editor-adjust-view',
+            'text': 'editor-text-view',
+            'my-stories': 'editor-mystories-view'
+        };
+
+        document.querySelectorAll('.editor-nav-view').forEach(v => v.classList.remove('active'));
+
+        const targetId = views[viewName];
+        if (targetId) {
+            const el = document.getElementById(targetId);
+            if (el) el.classList.add('active');
+        }
+
+        // Show/hide text toolbar
+        const textToolbar = document.getElementById('text-toolbar');
+        if (textToolbar) {
+            if (viewName === 'text') {
+                textToolbar.classList.add('active');
+            } else {
+                textToolbar.classList.remove('active');
+            }
+        }
+    }
+
+    // Initialize text toolbar events
+    bindTextToolbarEvents() {
+        // Add new text button
+        document.getElementById('add-new-text-btn')?.addEventListener('click', () => {
+            this.createNewTextElement();
+        });
+
+        // Delete selected text
+        document.getElementById('delete-text-btn')?.addEventListener('click', () => {
+            if (this.selectedElement && this.selectedElement.type === 'text') {
+                this.deleteElement(this.selectedElement);
+                this.updateDeleteButtonState();
+            }
+        });
+
+        // Color buttons
+        document.querySelectorAll('.txt-color').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.txt-color').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.currentTextColor = btn.dataset.color;
+
+                // Update selected text if exists
+                if (this.selectedElement && this.selectedElement.type === 'text') {
+                    this.selectedElement.color = btn.dataset.color;
+                    this.selectedElement.el.style.color = btn.dataset.color;
+                }
+            });
+        });
+
+        // Font buttons
+        document.querySelectorAll('.txt-font').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.txt-font').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.currentTextFont = btn.dataset.font;
+
+                // Update selected text if exists
+                if (this.selectedElement && this.selectedElement.type === 'text') {
+                    this.selectedElement.fontFamily = btn.dataset.font;
+                    this.selectedElement.el.style.fontFamily = btn.dataset.font;
+                }
+            });
+        });
+
+        // Size slider
+        const sizeSlider = document.getElementById('txt-size-slider');
+        const sizeVal = document.getElementById('txt-size-val');
+        if (sizeSlider) {
+            sizeSlider.addEventListener('input', (e) => {
+                const size = parseInt(e.target.value);
+                this.currentTextSize = size;
+                if (sizeVal) sizeVal.textContent = size;
+
+                // Update selected text if exists
+                if (this.selectedElement && this.selectedElement.type === 'text') {
+                    this.selectedElement.size = size;
+                    this.selectedElement.el.style.fontSize = size + 'px';
+                }
+            });
+        }
+    }
+
+    updateDeleteButtonState() {
+        const deleteBtn = document.getElementById('delete-text-btn');
+        if (deleteBtn) {
+            deleteBtn.disabled = !(this.selectedElement && this.selectedElement.type === 'text');
+        }
+    }
+
+    // Create new draggable, resizable text element
+    createNewTextElement() {
+        const container = this.elementsLayer;
+        if (!container) return;
+
+        const el = document.createElement('div');
+        el.className = 'text-element';
+        el.contentEditable = 'true';
+        el.innerText = 'טקסט';
+        el.style.fontFamily = this.currentTextFont;
+        el.style.color = this.currentTextColor;
+        el.style.fontSize = this.currentTextSize + 'px';
+
+        // Resize handle
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'resize-handle';
+        el.appendChild(resizeHandle);
+
+        // Delete handle
+        const deleteHandle = document.createElement('div');
+        deleteHandle.className = 'delete-handle';
+        deleteHandle.innerHTML = '×';
+        el.appendChild(deleteHandle);
+
+        // Position in center
+        const x = (container.offsetWidth / 2) - 50;
+        const y = (container.offsetHeight / 2) - 20;
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+
+        container.appendChild(el);
+
+        // Create element object
+        const element = {
+            type: 'text',
+            content: 'טקסט',
+            x: x,
+            y: y,
+            size: this.currentTextSize,
+            color: this.currentTextColor,
+            fontFamily: this.currentTextFont,
+            el: el
+        };
+        this.elements.push(element);
+
+        // Select it
+        this.selectTextElement(element);
+
+        // Focus for editing
+        el.focus();
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+        // Drag functionality
+        this.setupTextDrag(el, element);
+
+        // Resize functionality
+        this.setupTextResize(resizeHandle, el, element);
+
+        // Delete handle - click and touch
+        const handleDelete = (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            this.deleteElement(element);
+            this.updateDeleteButtonState();
+        };
+        deleteHandle.addEventListener('click', handleDelete);
+        deleteHandle.addEventListener('touchend', handleDelete);
+
+        // Touch to select (important for mobile)
+        el.addEventListener('touchend', (e) => {
+            if (!e.target.classList.contains('resize-handle') &&
+                !e.target.classList.contains('delete-handle')) {
+                this.selectTextElement(element);
+            }
+        });
+
+        // Click to select
+        el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.selectTextElement(element);
+        });
+
+        // Update content on blur
+        el.addEventListener('blur', () => {
+            element.content = el.innerText || el.textContent;
+        });
+
+        this.saveHistory();
+    }
+
+    selectTextElement(element) {
+        // Deselect all
+        document.querySelectorAll('.text-element').forEach(e => e.classList.remove('selected'));
+        this.selectedElement = element;
+        element.el.classList.add('selected');
+        this.updateDeleteButtonState();
+    }
+
+    setupTextDrag(el, element) {
+        let isDragging = false;
+        let startX, startY, startLeft, startTop;
+
+        const onStart = (e) => {
+            // Don't drag if clicking on handles
+            if (e.target.classList.contains('resize-handle') ||
+                e.target.classList.contains('delete-handle')) {
+                return;
+            }
+
+            // Blur editing if was focused
+            if (document.activeElement === el) {
+                el.blur();
+            }
+
+            isDragging = true;
+            el.style.cursor = 'grabbing';
+
+            const touch = e.touches ? e.touches[0] : e;
+            startX = touch.clientX;
+            startY = touch.clientY;
+            startLeft = parseInt(el.style.left) || 0;
+            startTop = parseInt(el.style.top) || 0;
+
+            this.selectTextElement(element);
+
+            if (e.cancelable) e.preventDefault();
+        };
+
+        const onMove = (e) => {
+            if (!isDragging) return;
+
+            const touch = e.touches ? e.touches[0] : e;
+            const dx = touch.clientX - startX;
+            const dy = touch.clientY - startY;
+
+            const newX = startLeft + dx;
+            const newY = startTop + dy;
+
+            element.x = newX;
+            element.y = newY;
+            el.style.left = newX + 'px';
+            el.style.top = newY + 'px';
+
+            if (e.cancelable) e.preventDefault();
+        };
+
+        const onEnd = () => {
+            if (isDragging) {
+                isDragging = false;
+                el.style.cursor = 'move';
+                this.saveHistory();
+            }
+        };
+
+        el.addEventListener('mousedown', onStart);
+        el.addEventListener('touchstart', onStart, { passive: false });
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('mouseup', onEnd);
+        document.addEventListener('touchend', onEnd);
+    }
+
+    setupTextResize(handle, el, element) {
+        let isResizing = false;
+        let startSize, startX;
+
+        const onStart = (e) => {
+            isResizing = true;
+            const touch = e.touches ? e.touches[0] : e;
+            startX = touch.clientX;
+            startSize = element.size || parseInt(el.style.fontSize) || 32;
+            e.preventDefault();
+            e.stopPropagation();
+        };
+
+        const onMove = (e) => {
+            if (!isResizing) return;
+            const touch = e.touches ? e.touches[0] : e;
+            const dx = touch.clientX - startX;
+            const newSize = Math.max(16, Math.min(100, startSize + dx / 2));
+
+            element.size = newSize;
+            el.style.fontSize = newSize + 'px';
+
+            // Update slider
+            const slider = document.getElementById('txt-size-slider');
+            const sizeVal = document.getElementById('txt-size-val');
+            if (slider) slider.value = newSize;
+            if (sizeVal) sizeVal.textContent = Math.round(newSize);
+
+            e.preventDefault();
+        };
+
+        const onEnd = () => {
+            if (isResizing) {
+                isResizing = false;
+                this.saveHistory();
+            }
+        };
+
+        handle.addEventListener('mousedown', onStart);
+        handle.addEventListener('touchstart', onStart, { passive: false });
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('mouseup', onEnd);
+        document.addEventListener('touchend', onEnd);
+    }
+
+    // Load my stories in nav
+    loadMyStoriesNav() {
+        const list = document.getElementById('my-stories-list');
+        if (!list) return;
+
+        const currentUser = localStorage.getItem('kingdom_current_user') || 'Aviya';
+        const stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
+        const now = Date.now();
+        const myStories = stories.filter(s => s.author === currentUser && (now - s.timestamp) < 5 * 60 * 60 * 1000);
+
+        list.innerHTML = '';
+
+        if (myStories.length === 0) {
+            list.innerHTML = '<span style="color:#888; font-size:11px;">אין סטוריז</span>';
+            return;
+        }
+
+        myStories.forEach(story => {
+            const item = document.createElement('div');
+            item.className = 'story-mini-item';
+
+            const img = document.createElement('img');
+            img.src = story.imageUrl;
+
+            const del = document.createElement('button');
+            del.className = 'story-mini-delete';
+            del.innerHTML = '×';
+            del.onclick = (e) => {
+                e.stopPropagation();
+                if (confirm('למחוק?')) {
+                    let allStories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
+                    allStories = allStories.filter(s => s.id !== story.id && s.timestamp !== story.timestamp);
+                    localStorage.setItem('kingdom_stories', JSON.stringify(allStories));
+                    this.loadMyStoriesNav();
+                }
+            };
+
+            item.appendChild(img);
+            item.appendChild(del);
+            list.appendChild(item);
         });
     }
 
@@ -331,6 +784,121 @@ class PhotoEditor {
                 textEl.style.fontFamily = element.fontFamily;
             }
         }
+    }
+
+    deleteElement(element) {
+        if (!element) return;
+
+        // Remove from DOM
+        if (element.el && element.el.parentNode) {
+            element.el.parentNode.removeChild(element.el);
+        }
+
+        // Remove from elements array
+        const index = this.elements.indexOf(element);
+        if (index > -1) {
+            this.elements.splice(index, 1);
+        }
+
+        // Clear selection
+        if (this.selectedElement === element) {
+            this.selectedElement = null;
+        }
+
+        this.saveHistory();
+
+        // Hide delete button if no text selected
+        const deleteBtn = document.getElementById('delete-selected-text');
+        if (deleteBtn) deleteBtn.style.display = 'none';
+    }
+
+    // Instagram-style: Create editable text directly on image
+    createEditableText() {
+        const container = this.elementsLayer;
+        if (!container) return;
+
+        // Create contenteditable div
+        const el = document.createElement('div');
+        el.className = 'editable-text';
+        el.contentEditable = 'true';
+        el.innerText = 'הקלד כאן';
+        el.style.fontFamily = this.currentTextFont;
+        el.style.color = this.currentTextColor;
+        el.style.fontSize = this.currentTextSize + 'px';
+
+        // Position in center
+        const x = (container.offsetWidth / 2) - 75;
+        const y = (container.offsetHeight / 2) - 25;
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+
+        container.appendChild(el);
+
+        // Create element object
+        const element = {
+            type: 'text',
+            content: 'הקלד כאן',
+            x: x,
+            y: y,
+            size: this.currentTextSize,
+            color: this.currentTextColor,
+            fontFamily: this.currentTextFont,
+            el: el
+        };
+        this.elements.push(element);
+
+        // Select it immediately
+        this.deselectAll();
+        el.classList.add('selected');
+        this.selectedElement = element;
+
+        // Show delete button
+        const deleteBtn = document.getElementById('delete-selected-text');
+        if (deleteBtn) deleteBtn.style.display = 'flex';
+
+        // Focus for immediate editing
+        el.focus();
+
+        // Select all text for easy replacement
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+        // Drag events
+        el.addEventListener('mousedown', (e) => {
+            if (e.target === el && !el.isContentEditable) {
+                this.startDrag(e, element);
+            }
+        });
+
+        el.addEventListener('touchstart', (e) => {
+            // Select element on touch
+            this.deselectAll();
+            el.classList.add('selected');
+            this.selectedElement = element;
+            const deleteBtn = document.getElementById('delete-selected-text');
+            if (deleteBtn) deleteBtn.style.display = 'flex';
+        });
+
+        // Update content on blur
+        el.addEventListener('blur', () => {
+            element.content = el.innerText;
+            this.saveHistory();
+        });
+
+        // Click to select (not drag)
+        el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.deselectAll();
+            el.classList.add('selected');
+            this.selectedElement = element;
+            const deleteBtn = document.getElementById('delete-selected-text');
+            if (deleteBtn) deleteBtn.style.display = 'flex';
+        });
+
+        this.saveHistory();
     }
 
     // ... (rest of methods)
@@ -1145,8 +1713,18 @@ class PhotoEditor {
     }
 
     addSticker(emoji) {
-        if (!emoji) return;
+        if (!emoji) {
+            console.log('addSticker: No emoji provided');
+            return;
+        }
+
         const container = this.elementsLayer;
+        if (!container) {
+            console.log('addSticker: elementsLayer not found');
+            return;
+        }
+
+        console.log('Adding sticker:', emoji);
 
         const el = document.createElement('div');
         el.className = 'draggable-element';
@@ -1154,7 +1732,7 @@ class PhotoEditor {
         el.innerHTML = `
             <span class="sticker-content">${emoji}</span>
             <div class="resize-handle"></div>
-            <button class="delete-element-btn"><i class="fa-solid fa-times"></i></button>
+            <button class="delete-element-btn"><i class="fa-solid fa-xmark"></i></button>
         `;
 
         const x = (container.offsetWidth / 2) - 30;

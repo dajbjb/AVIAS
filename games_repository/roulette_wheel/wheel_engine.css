@@ -21,12 +21,9 @@ body {
     background-image: radial-gradient(circle at center, #1a100c 0%, #000000 100%);
     color: var(--text-primary);
     font-family: 'Playfair Display', serif;
-    min-height: 100vh;
-    min-height: 100dvh;
-    /* Dynamic viewport height for mobile */
-    overflow-x: hidden;
-    overflow-y: auto;
-    /* Allow vertical scroll on mobile */
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
 }
 
 /* --- AMBIENT --- */
@@ -558,107 +555,104 @@ body {
     background: #fcf6ba;
 }
 
-/* Responsive - Mobile First */
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE - STABLE VERSION
+   ═══════════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
-    body {
-        overflow-y: auto;
-        padding-bottom: env(safe-area-inset-bottom, 20px);
-    }
 
-    .scene-scope {
-        position: relative;
-        min-height: auto;
-        padding: 80px 0 20px 0;
-    }
-
+    /* Wheel - smaller scale */
     .wheel-stage {
-        transform: rotateX(55deg) scale(0.55);
-        margin: 0 auto;
+        transform: rotateX(55deg) scale(0.5);
     }
 
-    .engine-header {
-        position: fixed;
-        top: 10px;
-        padding-top: env(safe-area-inset-top, 10px);
-    }
-
+    /* Header - smaller text */
     .logo-text {
-        font-size: 1.5rem;
+        font-size: 1.4rem;
+        letter-spacing: 3px;
     }
 
+    .sub-logo {
+        font-size: 0.7rem;
+        letter-spacing: 5px;
+    }
+
+    /* Spin Button - smaller */
     .spin-trigger-btn {
-        bottom: -100px;
-        padding: 12px 40px;
-        font-size: 0.9rem;
+        bottom: -90px;
+        padding: 10px 35px;
+        font-size: 0.85rem;
     }
 
-    /* Config Panel - Part of scroll flow on mobile */
+    /* Config Panel - Fixed at bottom, slide up */
     .config-panel {
-        position: relative;
+        position: fixed;
         top: auto;
-        right: auto;
-        transform: none;
-        width: calc(100% - 40px);
-        max-width: 400px;
-        margin: 40px auto 20px auto;
-        max-height: none;
-        border-radius: 12px;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        max-width: none;
+        max-height: 50vh;
+        border-radius: 20px 20px 0 0;
+        transform: translateY(calc(100% - 50px));
+        transition: transform 0.3s ease;
+        z-index: 6000;
+    }
+
+    .config-panel:not(.minimized) {
+        transform: translateY(0);
     }
 
     .config-panel.minimized {
-        transform: none;
-        max-height: 60px;
-        overflow: hidden;
+        transform: translateY(calc(100% - 50px));
+    }
+
+    .panel-header {
+        padding: 15px;
+        border-bottom: 1px solid rgba(92, 40, 21, 0.5);
     }
 
     .segments-list-container {
-        max-height: 200px;
+        max-height: 30vh;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
-    /* Victory Modal - Always centered and visible */
+    /* Victory Modal - safe areas */
     .victory-modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        height: 100dvh;
         padding: 20px;
-        padding-top: calc(20px + env(safe-area-inset-top, 0px));
-        padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-        overflow-y: auto;
+        padding-top: max(20px, env(safe-area-inset-top));
+        padding-bottom: max(20px, env(safe-area-inset-bottom));
     }
 
     .victory-card {
-        max-width: 90%;
-        width: 320px;
-        padding: 30px 20px;
-        margin: auto;
+        width: 90%;
+        max-width: 340px;
+        padding: 30px 25px;
     }
 
     .victory-title {
-        font-size: 2rem;
+        font-size: 1.8rem;
     }
 
     .claim-btn {
         width: 100%;
-        padding: 14px;
+        padding: 14px 30px;
     }
 }
 
 /* Extra small phones */
 @media (max-width: 380px) {
     .wheel-stage {
-        transform: rotateX(55deg) scale(0.45);
+        transform: rotateX(55deg) scale(0.42);
     }
 
     .logo-text {
         font-size: 1.2rem;
     }
 
-    .sub-logo {
-        font-size: 0.6rem;
-        letter-spacing: 4px;
+    .spin-trigger-btn {
+        bottom: -80px;
+        padding: 8px 30px;
     }
 }
