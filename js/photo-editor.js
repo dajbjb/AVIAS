@@ -208,7 +208,7 @@ class PhotoEditor {
         // Update model
         this.selectedElement.x = x;
         this.selectedElement.y = y;
-        
+
         // Update DOM
         this.selectedElement.el.style.left = x + 'px';
         this.selectedElement.el.style.top = y + 'px';
@@ -228,7 +228,7 @@ class PhotoEditor {
         // We don't nullify selectedElement immediately to allow color/font changes
         // Only if clicking outside
     }
-    
+
     updateElementStyle(element) {
         if (element.type === 'text') {
             const textEl = element.el.querySelector('.text-content');
@@ -247,7 +247,7 @@ class PhotoEditor {
 
         const el = document.createElement('div');
         el.className = 'draggable-element';
-        
+
         // Get current selected font/color logic or default
         const defaultFont = 'Montserrat, sans-serif';
         const defaultColor = '#ffffff';
@@ -280,7 +280,7 @@ class PhotoEditor {
         // Events
         el.addEventListener('mousedown', (e) => this.startDrag(e, element));
         el.addEventListener('touchstart', (e) => this.startDrag(e, element));
-        
+
         // Delete button
         const delBtn = el.querySelector('.delete-element-btn');
         delBtn.addEventListener('mousedown', (e) => e.stopPropagation()); // Prevent drag start
@@ -296,7 +296,7 @@ class PhotoEditor {
 
         this.saveHistory();
     }
-    
+
     // ...
 
     // ========================================
@@ -320,7 +320,7 @@ class PhotoEditor {
             this.currentFilter = 'cool';
             applied.push('אווירה חורפית');
         }
-        
+
         if (p.includes('קיץ') || p.includes('חם') || p.includes('warm') || p.includes('summer') || p.includes('שמש')) {
             this.adjustments.warmth = 40;
             this.adjustments.saturation = 20;
@@ -336,7 +336,7 @@ class PhotoEditor {
             this.currentFilter = 'vintage';
             applied.push('סגנון וינטג\'');
         }
-        
+
         if (p.includes('שחור לבן') || p.includes('bw') || p.includes('black')) {
             this.currentFilter = 'bw';
             this.adjustments.contrast = 20;
@@ -349,7 +349,7 @@ class PhotoEditor {
             this.currentFilter = 'vivid';
             applied.push('צבעים שמחים');
         }
-        
+
         if (p.includes('דרמטי') || p.includes('dramatic') || p.includes('עצוב') || p.includes('dark')) {
             this.adjustments.brightness = -20;
             this.adjustments.contrast = 40;
@@ -374,7 +374,7 @@ class PhotoEditor {
             this.renderCanvas();
         }
     }
-    
+
     updateSlidersUI() {
         ['brightness', 'contrast', 'saturation', 'warmth'].forEach(adj => {
             const slider = document.getElementById(`adj-${adj}`);
@@ -383,9 +383,9 @@ class PhotoEditor {
             if (val) val.textContent = this.adjustments[adj];
         });
     }
-    
+
     updateFilterUI() {
-         document.querySelectorAll('.filter-preset').forEach(p => {
+        document.querySelectorAll('.filter-preset').forEach(p => {
             p.classList.toggle('active', p.dataset.filter === this.currentFilter);
         });
     }
@@ -450,7 +450,7 @@ class PhotoEditor {
     }
 
     async save() {
-        this.showLoading('שומר...');
+        this.showLoading('מעלה סטורי...');
 
         // Create final canvas with all elements
         const finalCanvas = document.createElement('canvas');
@@ -458,24 +458,69 @@ class PhotoEditor {
         finalCanvas.height = this.canvas.height;
         const finalCtx = finalCanvas.getContext('2d');
 
-        // Draw base image
-        finalCtx.drawImage(this.canvas, 0, 0);
+        // Draw base image (with filters applied)
+        // Note: this.canvas doesn't have the filter context, so recreate logic or capture visual state
+        // Simplest for now: Draw the main canvas content
+
+        // Apply current filter to context before drawing
+        const filterStr = this.filterPresets[this.currentFilter] || 'none';
+        // Add manual adjustments strings
+        const brightness = 100 + (this.adjustments.brightness || 0);
+        const contrast = 100 + (this.adjustments.contrast || 0);
+        const saturate = 100 + (this.adjustments.saturation || 0);
+        const warmth = this.adjustments.warmth || 0;
+        let adjustFilter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%)`;
+        if (warmth > 0) adjustFilter += ` sepia(${warmth * 0.5}%)`;
+        if (warmth < 0) adjustFilter += ` hue-rotate(${warmth * 0.5}deg)`;
+
+        finalCtx.filter = `${filterStr} ${adjustFilter}`;
+        finalCtx.drawImage(this.originalImage, 0, 0, finalCanvas.width, finalCanvas.height);
+        finalCtx.filter = 'none';
 
         // Draw elements
         for (const element of this.elements) {
             await this.drawElementToCanvas(finalCtx, element);
         }
 
-        const dataURL = finalCanvas.toDataURL('image/jpeg', 0.92);
+        const dataURL = finalCanvas.toDataURL('image/jpeg', 0.85);
 
-        // Download
-        const link = document.createElement('a');
-        link.download = `kingdom_${Date.now()}.jpg`;
-        link.href = dataURL;
-        link.click();
+        // --- SAVE SYSTEM (CLOUD SYNC) ---
+        const currentUser = localStorage.getItem('kingdom_current_user') || 'Aviya';
+
+        const storyData = {
+            author: currentUser,
+            timestamp: Date.now(),
+            imageUrl: dataURL,
+            filter: this.currentFilter,
+            type: 'image',
+            caption: this.elements.find(e => e.type === 'text')?.content || ''
+        };
+
+        try {
+            if (typeof SyncManager !== 'undefined' && SyncManager.addStory) {
+                // This handles Cloud Upload + Firestore + Local Storage
+                await SyncManager.addStory(storyData);
+                this.showToast('הסטורי הועלה לענן בהצלחה! ☁️✨');
+            } else {
+                // Fallback if SyncManager is missing
+                const stories = JSON.parse(localStorage.getItem('kingdom_stories') || "[]");
+                stories.push({ ...storyData, id: Date.now().toString() });
+                localStorage.setItem('kingdom_stories', JSON.stringify(stories));
+                this.showToast('נשמר מקומית (אין חיבור לשרת) 💾');
+            }
+        } catch (e) {
+            console.error(e);
+            this.showToast('שגיאה בשמירה, נסה שוב');
+        }
+
+        await new Promise(r => setTimeout(r, 1200));
 
         this.hideLoading();
         this.close();
+
+        // Reload home logic
+        if (typeof window.renderHome === 'function') window.renderHome();
+        if (typeof window.renderStatusRings === 'function') window.renderStatusRings();
     }
 
     async drawElementToCanvas(ctx, element) {
