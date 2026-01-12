@@ -1,5 +1,6 @@
 /* ========================================
-   PHOTO EDITOR - Mobile First Design
+   PHOTO EDITOR V2 - Functional Design
+   Always visible preview, draggable elements
    ======================================== */
 
 .photo-editor-screen {
@@ -23,12 +24,12 @@
 .editor-loading-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(0, 0, 0, 0.9);
     display: none;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    z-index: 100;
+    z-index: 500;
 }
 
 .editor-loading-overlay.active {
@@ -36,12 +37,12 @@
 }
 
 .ai-loading-animation {
-    width: 50px;
-    height: 50px;
-    border: 3px solid rgba(212, 175, 55, 0.3);
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(212, 175, 55, 0.2);
     border-top-color: #d4af37;
     border-radius: 50%;
-    animation: spin 1s linear infinite;
+    animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
@@ -50,67 +51,66 @@
     }
 }
 
-@keyframes fadeInDown {
-    from {
-        opacity: 0;
-        transform: translateX(-50%) translateY(-10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateX(-50%) translateY(0);
-    }
-}
-
 .loading-text {
     color: #d4af37;
-    margin-top: 15px;
-    font-size: 14px;
+    margin-top: 20px;
+    font-size: 16px;
+    font-weight: 500;
 }
 
 /* ========================================
-   TOP BAR
+   TOP BAR - Fixed, Always Visible
    ======================================== */
 .editor-top-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 15px 20px;
-    padding-top: env(safe-area-inset-top, 15px);
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(10px);
-    z-index: 50;
+    padding: 15px 15px;
+    padding-top: calc(env(safe-area-inset-top, 10px) + 10px);
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent);
+    z-index: 100;
 }
 
-.editor-back-btn,
-.editor-save-btn {
-    background: none;
+.editor-back-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
     border: none;
     color: #fff;
-    font-size: 16px;
+    font-size: 18px;
     cursor: pointer;
-    padding: 10px;
+}
+
+.editor-save-btn {
+    background: linear-gradient(135deg, #d4af37, #b8982e);
+    border: none;
+    border-radius: 25px;
+    padding: 12px 24px;
+    color: #000;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.editor-save-btn {
-    background: linear-gradient(135deg, #d4af37, #aa8a2e);
-    border-radius: 20px;
-    padding: 10px 20px;
-    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
 }
 
 .editor-title {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
     color: #fff;
     margin: 0;
 }
 
 /* ========================================
-   PREVIEW AREA - Full Screen Image
+   PREVIEW AREA - Takes Most of Screen
    ======================================== */
 .editor-preview-area {
     flex: 1;
@@ -120,46 +120,118 @@
     justify-content: center;
     overflow: hidden;
     background: #0a0a0a;
+    /* Leave space for collapsed toolbar */
+    padding-bottom: 60px;
 }
 
 .editor-canvas-container {
     position: relative;
     max-width: 100%;
     max-height: 100%;
+    touch-action: none;
 }
 
-#editor-canvas,
-.editor-drawing-layer {
+#editor-canvas {
     max-width: 100%;
-    max-height: 60vh;
-    object-fit: contain;
+    max-height: 70vh;
     border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 
-.editor-drawing-layer {
+/* Draggable Elements Layer */
+.elements-layer {
     position: absolute;
     top: 0;
     left: 0;
+    width: 100%;
+    height: 100%;
     pointer-events: none;
 }
 
-.editor-drawing-layer.drawing-active {
+/* Draggable Sticker/Text Element */
+.draggable-element {
+    position: absolute;
+    cursor: move;
     pointer-events: auto;
+    user-select: none;
+    touch-action: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* Undo/Redo Floating Buttons */
+.draggable-element.selected {
+    outline: 2px dashed #d4af37;
+    outline-offset: 5px;
+}
+
+.draggable-element .sticker-content {
+    font-size: 60px;
+    line-height: 1;
+}
+
+.draggable-element .text-content {
+    color: #fff;
+    font-size: 24px;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    padding: 5px 10px;
+    white-space: nowrap;
+}
+
+/* Resize Handle */
+.resize-handle {
+    position: absolute;
+    bottom: -8px;
+    right: -8px;
+    width: 20px;
+    height: 20px;
+    background: #d4af37;
+    border-radius: 50%;
+    cursor: se-resize;
+    display: none;
+}
+
+.draggable-element.selected .resize-handle {
+    display: block;
+}
+
+/* Delete Button on Element */
+.delete-element-btn {
+    position: absolute;
+    top: -12px;
+    left: -12px;
+    width: 28px;
+    height: 28px;
+    background: #ff4444;
+    border-radius: 50%;
+    border: none;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.draggable-element.selected .delete-element-btn {
+    display: flex;
+}
+
+/* Undo/Redo - Floating Top Left */
 .undo-redo-bar {
     position: absolute;
-    top: 15px;
+    top: 80px;
     left: 15px;
     display: flex;
+    flex-direction: column;
     gap: 10px;
-    z-index: 20;
+    z-index: 50;
 }
 
 .undo-redo-btn {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(10px);
@@ -172,416 +244,301 @@
 
 .undo-redo-btn:disabled {
     opacity: 0.3;
-    cursor: not-allowed;
 }
 
-.undo-redo-btn:not(:disabled):active {
+.undo-redo-btn:active:not(:disabled) {
     transform: scale(0.9);
-    background: rgba(212, 175, 55, 0.3);
+    background: rgba(212, 175, 55, 0.4);
 }
 
 /* ========================================
-   AI SUGGESTIONS BAR
+   BOTTOM TOOLBAR - Collapsible
    ======================================== */
-.ai-suggestions-bar {
+.editor-bottom-toolbar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(15, 15, 15, 0.98);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.3s ease;
+    z-index: 100;
+    max-height: 50vh;
+    overflow: hidden;
+}
+
+.editor-bottom-toolbar.collapsed {
+    transform: translateY(calc(100% - 60px));
+}
+
+/* Toolbar Handle (To expand/collapse) */
+.toolbar-handle {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 15px;
-    background: rgba(212, 175, 55, 0.1);
-    border-top: 1px solid rgba(212, 175, 55, 0.2);
+    justify-content: center;
+    padding: 12px;
+    cursor: pointer;
+}
+
+.toolbar-handle-bar {
+    width: 40px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+}
+
+/* Quick Tools (Always visible even when collapsed) */
+.quick-tools-row {
+    display: flex;
+    justify-content: space-around;
+    padding: 0 10px 15px 10px;
+}
+
+.quick-tool-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 10px;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 10px;
+    transition: all 0.2s;
+}
+
+.quick-tool-btn i {
+    font-size: 22px;
+    color: #d4af37;
+}
+
+.quick-tool-btn.active {
+    background: rgba(212, 175, 55, 0.2);
+    color: #fff;
+}
+
+/* Expanded Content */
+.toolbar-expanded-content {
+    padding: 0 15px 20px 15px;
+    padding-bottom: calc(env(safe-area-inset-bottom, 10px) + 15px);
+    overflow-y: auto;
+    max-height: 35vh;
+}
+
+/* ========================================
+   FILTER PRESETS (Real filters)
+   ======================================== */
+.filters-grid {
+    display: flex;
+    gap: 12px;
     overflow-x: auto;
+    padding: 10px 0;
     -webkit-overflow-scrolling: touch;
 }
 
-.ai-suggestion-label {
-    color: #d4af37;
-    font-size: 12px;
-    white-space: nowrap;
-    display: flex;
-    align-items: center;
-    gap: 5px;
+.filter-preset {
+    flex-shrink: 0;
+    width: 70px;
+    text-align: center;
+    cursor: pointer;
 }
 
-#ai-suggestions-container {
+.filter-preview {
+    width: 70px;
+    height: 70px;
+    border-radius: 12px;
+    background: #333;
+    margin-bottom: 5px;
+    overflow: hidden;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.filter-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.filter-preset.active .filter-preview {
+    border-color: #d4af37;
+}
+
+.filter-preset span {
+    font-size: 11px;
+    color: #aaa;
+}
+
+.filter-preset.active span {
+    color: #d4af37;
+}
+
+/* ========================================
+   STICKERS PANEL
+   ======================================== */
+.stickers-scroll {
     display: flex;
     gap: 8px;
+    overflow-x: auto;
+    padding: 10px 0;
+    -webkit-overflow-scrolling: touch;
 }
 
-.ai-suggestion-btn {
+.sticker-btn {
+    flex-shrink: 0;
+    width: 55px;
+    height: 55px;
+    font-size: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(212, 175, 55, 0.3);
-    border-radius: 20px;
-    padding: 8px 15px;
-    color: #fff;
-    font-size: 12px;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.ai-suggestion-btn:active {
-    background: rgba(212, 175, 55, 0.3);
-    transform: scale(0.95);
-}
-
-/* ========================================
-   MODE TABS
-   ======================================== */
-.editor-mode-tabs {
-    display: flex;
-    background: rgba(20, 20, 20, 0.9);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.mode-tab {
-    flex: 1;
-    padding: 12px;
-    background: none;
     border: none;
-    color: rgba(255, 255, 255, 0.5);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    font-size: 12px;
+    border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s;
 }
 
-.mode-tab i {
-    font-size: 18px;
-}
-
-.mode-tab.active {
-    color: #d4af37;
-    background: rgba(212, 175, 55, 0.1);
+.sticker-btn:active {
+    transform: scale(1.15);
+    background: rgba(212, 175, 55, 0.3);
 }
 
 /* ========================================
-   TOOLS PANEL
+   TEXT INPUT
    ======================================== */
-.editor-tools-panel {
-    background: rgba(15, 15, 15, 0.95);
-    backdrop-filter: blur(20px);
-    padding: 15px;
-    padding-bottom: env(safe-area-inset-bottom, 20px);
-    max-height: 45vh;
-    overflow-y: auto;
-    transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-.editor-tools-panel.hidden {
-    transform: translateY(100%);
-    opacity: 0;
-    pointer-events: none;
-}
-
-.tools-container {
-    display: none;
-}
-
-.tools-container.active {
-    display: block;
-}
-
-/* Creative Tools Grid */
-.creative-tools-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+.text-input-row {
+    display: flex;
     gap: 10px;
+    padding: 10px 0;
 }
 
-.creative-tool-btn {
+.text-input-field {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 12px 15px;
+    color: #fff;
+    font-size: 16px;
+}
+
+.text-input-field::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.add-text-btn {
+    background: #d4af37;
+    border: none;
+    border-radius: 12px;
+    padding: 0 20px;
+    color: #000;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* ========================================
+   ADJUSTMENTS
+   ======================================== */
+.adjustment-list {
     display: flex;
     flex-direction: column;
+    gap: 15px;
+    padding: 10px 0;
+}
+
+.adjust-item {
+    display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 15px 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    gap: 12px;
+}
+
+.adjust-item label {
+    min-width: 70px;
+    color: #aaa;
+    font-size: 13px;
+}
+
+.adjust-item input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+}
+
+.adjust-item input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #d4af37;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.adjust-value {
+    min-width: 35px;
+    text-align: center;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* ========================================
+   AI MAGIC SECTION
+   ======================================== */
+.ai-magic-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 10px 0;
+}
+
+.ai-magic-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(212, 175, 55, 0.05));
+    border: 1px solid rgba(212, 175, 55, 0.3);
     border-radius: 12px;
     color: #fff;
-    font-size: 11px;
+    font-size: 13px;
     cursor: pointer;
     transition: all 0.2s;
 }
 
-.creative-tool-btn i {
+.ai-magic-btn i {
     font-size: 20px;
     color: #d4af37;
 }
 
-.creative-tool-btn:active,
-.creative-tool-btn.active {
-    background: rgba(212, 175, 55, 0.2);
-    border-color: #d4af37;
-}
-
-/* AI Tools Grid */
-.ai-tools-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-}
-
-.ai-tool-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 20px 15px;
-    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.05));
-    border: 1px solid rgba(212, 175, 55, 0.2);
-    border-radius: 15px;
-    color: #fff;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.ai-tool-btn i {
-    font-size: 24px;
-    color: #d4af37;
-}
-
-.ai-tool-btn:active {
+.ai-magic-btn:active {
     transform: scale(0.95);
     background: rgba(212, 175, 55, 0.3);
 }
 
-/* ========================================
-   SUB-TOOLS PANELS
-   ======================================== */
-.sub-tools-panel {
+/* Hidden panels */
+.tool-panel {
     display: none;
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    animation: slideUp 0.3s ease;
 }
 
-.sub-tools-panel.active {
+.tool-panel.active {
     display: block;
+    animation: fadeIn 0.2s ease;
 }
 
-@keyframes slideUp {
+@keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(5px);
     }
 
     to {
         opacity: 1;
         transform: translateY(0);
     }
-}
-
-/* Brush Options */
-.brush-options {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.brush-type-btn {
-    width: 45px;
-    height: 45px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #fff;
-    font-size: 18px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.brush-type-btn.active {
-    background: #d4af37;
-    color: #000;
-}
-
-.color-picker-container {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.color-option {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.color-option.active {
-    border-color: #fff;
-    transform: scale(1.1);
-}
-
-.size-slider-container {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: #fff;
-}
-
-.size-slider {
-    flex: 1;
-    -webkit-appearance: none;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 2px;
-}
-
-.size-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 18px;
-    height: 18px;
-    background: #d4af37;
-    border-radius: 50%;
-    cursor: pointer;
-}
-
-#brush-size-display {
-    min-width: 35px;
-    text-align: center;
-    font-size: 12px;
-}
-
-/* Stickers Grid */
-.stickers-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 10px;
-}
-
-.sticker-item {
-    font-size: 28px;
-    text-align: center;
-    padding: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.sticker-item:active {
-    transform: scale(1.2);
-    background: rgba(212, 175, 55, 0.2);
-}
-
-/* Adjustment Sliders */
-.adjustment-sliders {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.adjustment-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.adjustment-row label {
-    min-width: 60px;
-    color: #aaa;
-    font-size: 12px;
-}
-
-.adjustment-row input[type="range"] {
-    flex: 1;
-    -webkit-appearance: none;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 2px;
-}
-
-.adjustment-row input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    background: #d4af37;
-    border-radius: 50%;
-    cursor: pointer;
-}
-
-.value-display {
-    min-width: 30px;
-    text-align: center;
-    color: #fff;
-    font-size: 12px;
-}
-
-/* Style/Background Grid */
-.style-grid,
-.background-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-}
-
-.style-option,
-.background-option {
-    padding: 20px 15px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #fff;
-    font-size: 14px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.style-option:active,
-.background-option:active {
-    transform: scale(0.95);
-    border-color: #d4af37;
-}
-
-/* AI Prompt */
-.ai-prompt-container {
-    margin-top: 15px;
-    display: none;
-}
-
-.ai-prompt-container.active {
-    display: block;
-}
-
-.ai-prompt-input {
-    width: 100%;
-    height: 80px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(212, 175, 55, 0.3);
-    border-radius: 12px;
-    padding: 12px;
-    color: #fff;
-    font-size: 14px;
-    resize: none;
-    font-family: inherit;
-}
-
-.ai-prompt-input::placeholder {
-    color: rgba(255, 255, 255, 0.4);
-}
-
-.ai-prompt-submit {
-    width: 100%;
-    margin-top: 10px;
-    padding: 15px;
-    background: linear-gradient(135deg, #d4af37, #aa8a2e);
-    border: none;
-    border-radius: 12px;
-    color: #000;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
 }
