@@ -120,18 +120,32 @@ class CameraApp {
                 audio: false
             };
 
+            this.video.setAttribute('autoplay', '');
+            this.video.setAttribute('playsinline', '');
+            this.video.setAttribute('muted', '');
+
             this.stream = await navigator.mediaDevices.getUserMedia(constraints);
             this.video.srcObject = this.stream;
 
-            await new Promise(resolve => {
-                this.video.onloadedmetadata = () => {
-                    console.log('Video metadata loaded');
+            // Wait for video to be ready
+            await new Promise((resolve) => {
+                if (this.video.readyState >= 3) {
                     resolve();
-                };
+                } else {
+                    this.video.onloadedmetadata = () => resolve();
+                }
             });
 
             await this.video.play();
 
+            // Mobile Fullscreen Fix
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+
+            // Adjust internal resolution to match aspect ratio of video stream but fit screen
+            // or just use video resolution if we want 1:1 pixel mapping, but CSS handles display size.
+            // Let's set canvas resolution to video resolution for best processing, 
+            // but ensuring CSS makes it cover.
             this.canvas.width = this.video.videoWidth;
             this.canvas.height = this.video.videoHeight;
 
@@ -142,6 +156,35 @@ class CameraApp {
             this.renderLoop();
 
             console.log('Camera started successfully!');
+
+            // Check for black/blocked camera (Laptop Privacy Switch)
+            setTimeout(() => {
+                if (this.isRunning && this.video.videoWidth > 0) {
+                    const testCanvas = document.createElement('canvas');
+                    testCanvas.width = 10;
+                    testCanvas.height = 10;
+                    const testCtx = testCanvas.getContext('2d');
+                    testCtx.drawImage(this.video, 0, 0, 10, 10);
+                    const data = testCtx.getImageData(0, 0, 10, 10).data;
+                    let isBlack = true;
+                    for (let i = 0; i < data.length; i += 4) {
+                        if (data[i] > 10 || data[i + 1] > 10 || data[i + 2] > 10) {
+                            isBlack = false;
+                            break;
+                        }
+                    }
+                    if (isBlack) {
+                        console.warn('Camera feed detected as black/blocked');
+                        const msg = document.createElement('div');
+                        msg.id = 'camera-blocked-msg';
+                        msg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.8);color:white;padding:20px;border-radius:15px;z-index:10000;text-align:center;font-family:sans-serif;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.2);';
+                        msg.innerHTML = '<i class="fa-solid fa-camera-slash" style="font-size:2rem;margin-bottom:10px;display:block;"></i>המצלמה חסומה או כבויה בהגדרות המחשב';
+                        document.body.appendChild(msg);
+                        setTimeout(() => msg.remove(), 4000);
+                    }
+                }
+            }, 2000);
+
         } catch (error) {
             console.error('Error starting camera:', error);
             alert('שגיאה בגישה למצלמה: ' + error.message);

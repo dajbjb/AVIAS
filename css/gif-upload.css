@@ -1,0 +1,28 @@
+/* GIF Upload Button Styles */
+.gif-upload-wrapper {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.gif-upload-wrapper:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: #fff;
+}
+
+.upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: white;
+    font-size: 0.8rem;
+    gap: 5px;
+}
+
+.upload-placeholder i {
+    font-size: 1.5rem;
+}

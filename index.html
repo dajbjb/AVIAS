@@ -12,6 +12,9 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="login-ui.css">
     <link rel="stylesheet" href="css/photo-editor.css">
+    <link rel="stylesheet" href="css/light-theme-override.css">
+    <link rel="stylesheet" href="css/gif-upload.css">
+    <link rel="stylesheet" href="css/chat-transform.css">
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -126,11 +129,35 @@
         </section>
         <section id="chat" class="view">
             <div class="chat-container">
+                <!-- New Chat Header -->
+                <div class="chat-header">
+                    <button class="chat-back-btn" id="chat-back-btn">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <div class="chat-user-info">
+                        <span class="chat-partner-name" id="chat-header-name">Partner</span>
+                        <span class="chat-status" id="chat-header-status">Online</span>
+                    </div>
+                    <div class="chat-actions">
+                        <button class="chat-action-btn"><i class="fa-solid fa-phone"></i></button>
+                        <button class="chat-action-btn"><i class="fa-solid fa-video"></i></button>
+                    </div>
+                </div>
+
                 <div id="chat-history" class="chat-history"></div>
 
                 <!-- GIF Picker -->
                 <div id="chat-gif-picker" class="gif-picker" style="display: none;">
                     <div class="gif-grid">
+                        <!-- Upload Custom GIF -->
+                        <!-- Upload Custom GIF -->
+                        <label class="gif-item gif-upload-wrapper" for="gif-upload-input">
+                            <input type="file" id="gif-upload-input" accept="image/gif" hidden>
+                            <div class="upload-placeholder">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                                <span>Upload</span>
+                            </div>
+                        </label>
                         <!-- Original Selection -->
                         <img src="https://media.giphy.com/media/3o7TKs6lJ0P09L4l8I/giphy.gif" class="gif-item"
                             onclick="sendGif('https://media.giphy.com/media/3o7TKs6lJ0P09L4l8I/giphy.gif')">
@@ -171,7 +198,7 @@
                     <input type="text" id="chat-input" placeholder="Write a message..." autocomplete="off">
                     <button id="chat-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
                 </div>
-                <audio id="chat-sent-sound" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3"
+                <audio id="chat-sent-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"
                     preload="auto"></audio>
             </div>
         </section>
@@ -464,7 +491,9 @@
         <div class="editor-preview-area">
             <div class="editor-canvas-container">
                 <canvas id="editor-canvas"></canvas>
-                <div class="elements-layer"></div>
+                <div class="elements-layer">
+                    <div class="text-creation-preview" id="text-creation-preview"></div>
+                </div>
             </div>
         </div>
 
@@ -569,9 +598,13 @@
                     <i class="fa-solid fa-plus"></i> הוסף טקסט
                 </button>
 
-                <!-- Delete Selected -->
-                <button class="text-delete-btn" id="delete-text-btn" disabled>
-                    <i class="fa-solid fa-trash"></i>
+                <i class="fa-solid fa-trash"></i>
+                </button>
+
+                <!-- Finish Editing Button -->
+                <button id="finish-text-btn" class="toolbar-btn text-finish-btn" style="display: none;">
+                    <i class="fa-solid fa-check"></i>
+                    <span>סיימתי</span>
                 </button>
             </div>
 

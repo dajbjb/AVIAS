@@ -1,0 +1,210 @@
+/* 
+   🦋 Chat Navigation Transformation & Header 
+   Handles the morphing of the nav bar into the chat input and the chat header.
+*/
+
+/* 1. Chat Header (New) */
+.chat-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 70px;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.85);
+    /* Glass Light */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    /* Soft shadow */
+    transform: translateY(-100%);
+    transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+    /* Bouncy enter */
+}
+
+/* Show header only when chat is active */
+body.chat-active .chat-header {
+    transform: translateY(0);
+}
+
+.chat-back-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    /* Defined in light-theme-override */
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    /* Center icon */
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.chat-back-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.chat-user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.chat-partner-name {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.chat-status {
+    font-size: 0.75rem;
+    color: #00b894;
+    /* Online Green */
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.chat-status::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: #00b894;
+    border-radius: 50%;
+}
+
+.chat-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.chat-action-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.1rem;
+    color: var(--accent-gold);
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.chat-action-btn:hover {
+    background: rgba(212, 175, 55, 0.1);
+    transform: scale(1.1);
+}
+
+/* 2. Chat Input Transformation */
+
+/* Default state (Hidden/Normal inside view) - handled by style.css but we override here for the morph */
+.chat-input-area {
+    /* We want it successfully hidden when NOT in chat mode if we are moving it to fixed? 
+       Actually, standard flow keeps it in DOM. We just want to position it fixed at bottom. */
+    transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* When Chat Mode is Active */
+body.chat-active .chat-input-area {
+    position: fixed !important;
+    bottom: 30px !important;
+    /* Same as Nav Bar */
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 380px !important;
+    /* Match Nav Bar Width */
+    max-width: 95vw !important;
+    border-radius: 25px !important;
+    /* Match Nav Bar Radius */
+    padding: 5px 10px !important;
+    background: rgba(255, 255, 255, 0.75) !important;
+    /* Match Glass Nav */
+    border: 1px solid rgba(255, 255, 255, 0.9) !important;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1) !important;
+    /* Match Nav Shadow */
+    z-index: 10002 !important;
+    /* Above Nav Bar */
+    height: 65px !important;
+    /* Taller for input */
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* The actual input field inside needs to look good */
+body.chat-active #chat-input {
+    background: rgba(255, 255, 255, 0.5) !important;
+    border: none !important;
+    border-radius: 20px !important;
+    height: 40px !important;
+    padding-left: 15px !important;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.03) !important;
+    color: #000 !important;
+    /* Force black text */
+    flex: 1;
+    /* Ensure it takes available space */
+}
+
+/* Fix GIF Picker Positioning in Chat Mode */
+body.chat-active #chat-gif-picker {
+    position: fixed !important;
+    bottom: 105px !important;
+    /* 30px (input) + 65px (height) + 10px spacing */
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 360px !important;
+    max-width: 90vw !important;
+    max-height: 300px !important;
+    overflow-y: auto !important;
+    z-index: 10005 !important;
+    /* Above input */
+    border-radius: 20px !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15) !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Adjust the GIF Button within the input area */
+body.chat-active #chat-gif-btn,
+body.chat-active #chat-camera-btn,
+body.chat-active #chat-send-btn {
+    color: var(--accent-gold) !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 10px !important;
+    font-size: 1.2rem !important;
+    cursor: pointer !important;
+    z-index: 10006 !important;
+    /* Ensure clickable */
+}
+
+body.chat-active #chat-send-btn {
+    color: #00b894 !important;
+    /* Send button distinct color */
+}
+
+/* 3. Hide Original Nav Bar */
+body.chat-active #main-nav {
+    transform: translateX(-50%) scale(0.8) !important;
+    /* Shrink */
+    opacity: 0 !important;
+    pointer-events: none !important;
+    bottom: 10px !important;
+    /* Move down slightly */
+}
+
+/* 4. Adjust Chat History Spacing */
+/* Since input is now fixed over content, and header is fixed over top */
+body.chat-active .chat-history {
+    padding-top: 80px !important;
+    /* Clearance for header */
+    padding-bottom: 100px !important;
+    /* Clearance for input bubble */
+}

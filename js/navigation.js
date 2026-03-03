@@ -15,6 +15,18 @@ let navState = {
     rAF: null
 };
 
+// Chat Mode Back Button Logic
+document.addEventListener('DOMContentLoaded', () => {
+    const chatBackBtn = document.getElementById('chat-back-btn');
+    if (chatBackBtn) {
+        chatBackBtn.addEventListener('click', () => {
+            // Go back to Home
+            const homeTab = document.querySelector('.nav-item[data-tab="home"]');
+            if (homeTab) homeTab.click();
+        });
+    }
+});
+
 function moveIndicatorToTab(tabElement) {
     if (!tabElement || !indicator) return;
     const navBar = document.querySelector('.glass-nav');
@@ -183,6 +195,18 @@ navItems.forEach(item => {
             if (v.id === target) {
                 views.forEach(other => { if (other.id !== target) other.classList.remove('active'); });
 
+                // CHAT MODE TRANSFORM
+                if (target === 'chat') {
+                    document.body.classList.add('chat-active');
+                    // Update Header Name based on partner
+                    const currentUser = localStorage.getItem('kingdom_current_user') || 'Aviya';
+                    const partnerName = currentUser === 'Aviya' ? 'David' : 'Aviya';
+                    const headerNameEl = document.getElementById('chat-header-name');
+                    if (headerNameEl) headerNameEl.textContent = partnerName;
+                } else {
+                    document.body.classList.remove('chat-active');
+                }
+
                 // Camera Handling
                 if (target === 'create') {
                     console.log("Nav: Switching to Create. Starting Camera...");
@@ -214,7 +238,7 @@ navItems.forEach(item => {
                     } else if (typeof stopCamera === 'function') {
                         stopCamera();
                     }
-                    setNavMode('main');
+                    if (target !== 'create') setNavMode('main'); // Fix: Don't set main mode if entering chat
                 }
 
                 if (!v.classList.contains('active')) {

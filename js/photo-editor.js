@@ -15,13 +15,11 @@ class PhotoEditor {
         this.toolbar = document.querySelector('.editor-bottom-toolbar');
         this.elementsLayer = document.querySelector('.elements-layer');
 
-        // State
-        this.originalImage = null;
-        this.currentFilter = 'none';
-        this.elements = []; // Stickers, text, etc.
         this.selectedElement = null;
         this.isDragging = false;
         this.isResizing = false;
+        this.isTextMode = false; // Whether we are in creation or focused-editing mode
+        this.textCreationData = { startX: 0, startY: 0, active: false };
         this.dragOffset = { x: 0, y: 0 };
 
         // Adjustments
@@ -155,9 +153,10 @@ class PhotoEditor {
             });
         });
 
-        // Text Tool - Create inline editable text when clicking "text" tool
+        // Text tool - now handled by showing the toolbar and clicking "add new text"
         document.getElementById('text-tool-btn')?.addEventListener('click', () => {
-            this.createEditableText();
+            // Just open view, don't create text automatically
+            this.showEditorView('text');
         });
 
         // Font Selection (new style)
@@ -317,18 +316,23 @@ class PhotoEditor {
         }
     }
 
-    // Initialize text toolbar events
     bindTextToolbarEvents() {
-        // Add new text button
+        // Add new text button - Start Creation Mode
         document.getElementById('add-new-text-btn')?.addEventListener('click', () => {
-            this.createNewTextElement();
+            if (this.isTextMode) return;
+            this.enterTextCreationMode();
+        });
+
+        // Finish editing button
+        document.getElementById('finish-text-btn')?.addEventListener('click', () => {
+            this.exitTextMode();
         });
 
         // Delete selected text
         document.getElementById('delete-text-btn')?.addEventListener('click', () => {
             if (this.selectedElement && this.selectedElement.type === 'text') {
                 this.deleteElement(this.selectedElement);
-                this.updateDeleteButtonState();
+                this.exitTextMode(); // Close mode on delete
             }
         });
 
@@ -387,44 +391,129 @@ class PhotoEditor {
         }
     }
 
-    // Create new draggable, resizable text element
-    createNewTextElement() {
-        const container = this.elementsLayer;
-        if (!container) return;
 
+
+    enterTextCreationMode() {
+        this.isTextMode = true;
+        this.updateTextUIState();
+        this.screen.classList.add('text-creation-active');
+        this.showToast('גרור על התמונה כדי ליצור תיבת טקסט');
+
+        const preview = document.getElementById('text-creation-preview');
+        const layer = this.elementsLayer;
+
+        const onStart = (e) => {
+            if (!this.isTextMode) return;
+            const touch = e.touches ? e.touches[0] : e;
+            const rect = layer.getBoundingClientRect();
+
+            this.textCreationData.startX = touch.clientX - rect.left;
+            this.textCreationData.startY = touch.clientY - rect.top;
+            this.textCreationData.active = true;
+
+            if (preview) {
+                preview.style.left = this.textCreationData.startX + 'px';
+                preview.style.top = this.textCreationData.startY + 'px';
+                preview.style.width = '0px';
+                preview.style.height = '0px';
+                preview.style.display = 'block';
+            }
+
+            // Re-bind move/end to window to be robust
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onEnd);
+            window.addEventListener('touchmove', onMove, { passive: false });
+            window.addEventListener('touchend', onEnd);
+        };
+
+        const onMove = (e) => {
+            if (!this.textCreationData.active) return;
+            const touch = e.touches ? e.touches[0] : e;
+            const rect = layer.getBoundingClientRect();
+
+            const currentX = touch.clientX - rect.left;
+            const currentY = touch.clientY - rect.top;
+
+            const x = Math.min(this.textCreationData.startX, currentX);
+            const y = Math.min(this.textCreationData.startY, currentY);
+            const w = Math.abs(currentX - this.textCreationData.startX);
+            const h = Math.abs(currentY - this.textCreationData.startY);
+
+            if (preview) {
+                preview.style.left = x + 'px';
+                preview.style.top = y + 'px';
+                preview.style.width = w + 'px';
+                preview.style.height = h + 'px';
+            }
+
+            if (e.cancelable) e.preventDefault();
+        };
+
+        const onEnd = () => {
+            if (!this.textCreationData.active) return;
+            this.textCreationData.active = false;
+
+            if (preview) {
+                const w = parseInt(preview.style.width);
+                const h = parseInt(preview.style.height);
+                const x = parseInt(preview.style.left);
+                const y = parseInt(preview.style.top);
+
+                preview.style.display = 'none';
+
+                if (w > 20 && h > 15) {
+                    this.finalizeTextCreation(x, y, w, h);
+                } else {
+                    // Canceled or too small - exit mode
+                    this.exitTextMode();
+                }
+            }
+
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onEnd);
+            window.removeEventListener('touchmove', onMove);
+            window.removeEventListener('touchend', onEnd);
+
+            layer.removeEventListener('mousedown', onStart);
+            layer.removeEventListener('touchstart', onStart);
+        };
+
+        layer.addEventListener('mousedown', onStart);
+        layer.addEventListener('touchstart', onStart, { passive: false });
+    }
+
+    finalizeTextCreation(x, y, w, h) {
+        const container = this.elementsLayer;
         const el = document.createElement('div');
         el.className = 'text-element';
         el.contentEditable = 'true';
-        el.innerText = 'טקסט';
+        el.innerText = '';
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+        el.style.width = w + 'px';
+        el.style.height = h + 'px';
         el.style.fontFamily = this.currentTextFont;
         el.style.color = this.currentTextColor;
         el.style.fontSize = this.currentTextSize + 'px';
 
-        // Resize handle
         const resizeHandle = document.createElement('div');
         resizeHandle.className = 'resize-handle';
         el.appendChild(resizeHandle);
 
-        // Delete handle
         const deleteHandle = document.createElement('div');
         deleteHandle.className = 'delete-handle';
         deleteHandle.innerHTML = '×';
         el.appendChild(deleteHandle);
 
-        // Position in center
-        const x = (container.offsetWidth / 2) - 50;
-        const y = (container.offsetHeight / 2) - 20;
-        el.style.left = x + 'px';
-        el.style.top = y + 'px';
-
         container.appendChild(el);
 
-        // Create element object
         const element = {
             type: 'text',
-            content: 'טקסט',
+            content: '',
             x: x,
             y: y,
+            w: w,
+            h: h,
             size: this.currentTextSize,
             color: this.currentTextColor,
             fontFamily: this.currentTextFont,
@@ -432,54 +521,141 @@ class PhotoEditor {
         };
         this.elements.push(element);
 
-        // Select it
         this.selectTextElement(element);
-
-        // Focus for editing
         el.focus();
-        const range = document.createRange();
-        range.selectNodeContents(el);
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
 
-        // Drag functionality
+        this.setupTextEvents(el, element, resizeHandle, deleteHandle);
+        this.saveHistory();
+    }
+
+    setupTextEvents(el, element, resizeHandle, deleteHandle) {
+        // Drag logic
         this.setupTextDrag(el, element);
 
-        // Resize functionality
-        this.setupTextResize(resizeHandle, el, element);
+        // Box resize logic
+        this.setupBoxResize(resizeHandle, el, element);
 
-        // Delete handle - click and touch
+        // Delete logic
         const handleDelete = (e) => {
             e.stopPropagation();
-            e.preventDefault();
             this.deleteElement(element);
-            this.updateDeleteButtonState();
+            this.exitTextMode();
         };
         deleteHandle.addEventListener('click', handleDelete);
         deleteHandle.addEventListener('touchend', handleDelete);
 
-        // Touch to select (important for mobile)
-        el.addEventListener('touchend', (e) => {
-            if (!e.target.classList.contains('resize-handle') &&
-                !e.target.classList.contains('delete-handle')) {
-                this.selectTextElement(element);
-            }
-        });
-
-        // Click to select
-        el.addEventListener('click', (e) => {
+        // Selection logic
+        el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             this.selectTextElement(element);
         });
 
-        // Update content on blur
-        el.addEventListener('blur', () => {
+        el.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+            this.selectTextElement(element);
+        }, { passive: true });
+
+        // Content updates
+        el.addEventListener('input', () => {
             element.content = el.innerText || el.textContent;
         });
 
-        this.saveHistory();
+        el.addEventListener('blur', () => {
+            this.saveHistory();
+        });
     }
+
+    setupBoxResize(handle, el, element) {
+        let isResizing = false;
+        let startW, startH, startX, startY;
+
+        const onStart = (e) => {
+            isResizing = true;
+            this.isResizing = true;
+            const touch = e.touches ? e.touches[0] : e;
+            startX = touch.clientX;
+            startY = touch.clientY;
+            startW = parseInt(el.style.width);
+            startH = parseInt(el.style.height);
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onEnd);
+            window.addEventListener('touchmove', onMove, { passive: false });
+            window.addEventListener('touchend', onEnd);
+        };
+
+        const onMove = (e) => {
+            if (!isResizing) return;
+            const touch = e.touches ? e.touches[0] : e;
+            const dx = touch.clientX - startX;
+            const dy = touch.clientY - startY;
+
+            const newW = Math.max(30, startW + dx);
+            const newH = Math.max(20, startH + dy);
+
+            element.w = newW;
+            element.h = newH;
+            el.style.width = newW + 'px';
+            el.style.height = newH + 'px';
+
+            if (e.cancelable) e.preventDefault();
+        };
+
+        const onEnd = () => {
+            if (isResizing) {
+                isResizing = false;
+                this.isResizing = false;
+                this.saveHistory();
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onEnd);
+                window.removeEventListener('touchmove', onMove);
+                window.removeEventListener('touchend', onEnd);
+            }
+        };
+
+        handle.addEventListener('mousedown', onStart);
+        handle.addEventListener('touchstart', onStart, { passive: false });
+    }
+
+    exitTextMode() {
+        this.isTextMode = false;
+        this.deselectAll();
+        this.updateTextUIState();
+        this.screen.classList.remove('text-creation-active');
+    }
+
+    updateTextUIState() {
+        const addBtn = document.getElementById('add-new-text-btn');
+        const finishBtn = document.getElementById('finish-text-btn');
+        const deleteBtn = document.getElementById('delete-text-btn');
+
+        if (this.isTextMode) {
+            if (addBtn) addBtn.style.display = 'none';
+            if (finishBtn) finishBtn.style.display = 'flex';
+        } else {
+            if (addBtn) addBtn.style.display = 'flex';
+            if (finishBtn) finishBtn.style.display = 'none';
+        }
+
+        if (deleteBtn) {
+            deleteBtn.disabled = !this.selectedElement;
+        }
+    }
+
+    showToast(msg) {
+        const toast = document.createElement('div');
+        toast.className = 'editor-toast';
+        toast.style.cssText = 'position:fixed;top:100px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:white;padding:10px 20px;border-radius:20px;z-index:9999;font-size:14px;pointer-events:none;transition:opacity 0.3s;';
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 2000);
+    }
+
 
     selectTextElement(element) {
         // Deselect all
@@ -494,18 +670,11 @@ class PhotoEditor {
         let startX, startY, startLeft, startTop;
 
         const onStart = (e) => {
-            // Don't drag if clicking on handles
-            if (e.target.classList.contains('resize-handle') ||
-                e.target.classList.contains('delete-handle')) {
-                return;
-            }
-
-            // Blur editing if was focused
-            if (document.activeElement === el) {
-                el.blur();
-            }
+            // Don't drag if clicking handles or if not our mode (optional)
+            if (e.target.classList.contains('resize-handle') || e.target.classList.contains('delete-handle')) return;
 
             isDragging = true;
+            this.isDragging = true;
             el.style.cursor = 'grabbing';
 
             const touch = e.touches ? e.touches[0] : e;
@@ -515,6 +684,12 @@ class PhotoEditor {
             startTop = parseInt(el.style.top) || 0;
 
             this.selectTextElement(element);
+
+            // Add global listeners
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onEnd);
+            window.addEventListener('touchmove', onMove, { passive: false });
+            window.addEventListener('touchend', onEnd);
 
             if (e.cancelable) e.preventDefault();
         };
@@ -540,17 +715,20 @@ class PhotoEditor {
         const onEnd = () => {
             if (isDragging) {
                 isDragging = false;
+                this.isDragging = false;
                 el.style.cursor = 'move';
                 this.saveHistory();
+
+                // Cleanup global listeners
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onEnd);
+                window.removeEventListener('touchmove', onMove);
+                window.removeEventListener('touchend', onEnd);
             }
         };
 
         el.addEventListener('mousedown', onStart);
         el.addEventListener('touchstart', onStart, { passive: false });
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('touchmove', onMove, { passive: false });
-        document.addEventListener('mouseup', onEnd);
-        document.addEventListener('touchend', onEnd);
     }
 
     setupTextResize(handle, el, element) {
@@ -1825,14 +2003,9 @@ class PhotoEditor {
     }
 
     async drawElementToCanvas(ctx, element) {
-        // Helper for saving
         ctx.save();
         const x = element.x;
         const y = element.y;
-
-        // Assuming elements act as DOM overlays, we approximate their position on canvas
-        // Since canvas and overlay are 1:1, coords match.
-        if (element.type === 'image') return; // Not implemented yet
 
         if (element.type === 'text') {
             ctx.font = `bold ${element.size}px ${element.fontFamily || 'Arial'}`;

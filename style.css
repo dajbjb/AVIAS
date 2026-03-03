@@ -1107,6 +1107,33 @@ body::before {
     pointer-events: none;
 }
 
+.memory-item.collapsed .memory-.text-delete-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.text-finish-btn {
+    background: #4CAF50 !important;
+    color: white !important;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+}
+
+.text-finish-btn:active {
+    transform: scale(0.95);
+}
+
+.memory-item.collapsed .memory-header {
+    margin-bottom: 0;
+}
+
 .memory-item.collapsed .memory-theme-overlay {
     opacity: 0.05;
     inset: 0;
@@ -3440,32 +3467,92 @@ body::before {
     touch-action: none;
 }
 
-/* Draggable Text Item */
-.drag-text-item {
+/* Draggable & Resizable Text Box */
+.text-element {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     min-width: 50px;
-    max-width: 80%;
-    text-align: center;
-    padding: 10px;
-    border: 1px dashed transparent;
+    min-height: 30px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px dashed rgba(255, 255, 255, 0.4);
+    color: white;
     cursor: move;
-    user-select: none;
-    -webkit-user-select: none;
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-size: 1.5rem;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    outline: none;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    transition: background 0.2s, border 0.2s;
+    z-index: 100;
 }
 
-.drag-text-item:active,
-.drag-text-item:focus {
-    border-color: rgba(255, 255, 255, 0.5);
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-    outline: none;
+.text-element.selected {
+    border: 1px solid var(--rose-gold);
+    background: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 0 10px rgba(224, 191, 184, 0.3);
+}
+
+.text-element:empty::before {
+    content: 'הקלד...';
+    opacity: 0.5;
+    font-style: italic;
+}
+
+.text-element .resize-handle {
+    position: absolute;
+    right: -6px;
+    bottom: -6px;
+    width: 14px;
+    height: 14px;
+    background: var(--rose-gold);
+    border: 2px solid white;
+    border-radius: 50%;
+    cursor: nwse-resize;
+    z-index: 10;
+    display: none;
+}
+
+.text-element.selected .resize-handle,
+.text-element.selected .delete-handle {
+    display: flex;
+}
+
+.text-element .delete-handle {
+    position: absolute;
+    left: -10px;
+    top: -10px;
+    width: 22px;
+    height: 22px;
+    background: #ff4d4d;
+    color: white;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    z-index: 10;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+/* Prediction/Creation box */
+.text-creation-preview {
+    position: absolute;
+    border: 2px dashed var(--rose-gold);
+    background: rgba(224, 191, 184, 0.15);
+    pointer-events: none;
+    z-index: 2000;
+    border-radius: 4px;
+    display: none;
+}
+
+.text-creation-active {
+    cursor: crosshair !important;
+}
+
+.text-creation-active .elements-layer {
+    cursor: crosshair !important;
 }
 
 /* Font Styles */

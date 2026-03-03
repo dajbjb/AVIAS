@@ -166,11 +166,26 @@ const gifBtn = document.getElementById('chat-gif-btn');
 const gifPicker = document.getElementById('chat-gif-picker');
 function toggleGifPicker(show) {
     if (!gifPicker) return;
-    gifPicker.style.display = (typeof show === 'boolean') ? (show ? 'block' : 'none') : (gifPicker.style.display === 'none' ? 'block' : 'none');
+    const isCurrentlyVisible = gifPicker.style.display === 'block';
+    // If show is undefined, toggle. If defined, set to value.
+    const shouldShow = (typeof show === 'boolean') ? show : !isCurrentlyVisible;
+    gifPicker.style.display = shouldShow ? 'block' : 'none';
 }
-if (gifBtn) gifBtn.addEventListener('click', toggleGifPicker);
+
+if (gifBtn) {
+    gifBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent document click from firing immediately
+        toggleGifPicker();
+    });
+}
+
 document.addEventListener('click', (e) => {
-    if (gifPicker && gifPicker.style.display === 'block' && !gifPicker.contains(e.target) && e.target !== gifBtn) toggleGifPicker(false);
+    // If picker is open, and click is NOT inside picker and NOT on the button (or its children)
+    if (gifPicker && gifPicker.style.display === 'block') {
+        if (!gifPicker.contains(e.target) && !gifBtn.contains(e.target)) {
+            toggleGifPicker(false);
+        }
+    }
 });
 
 // Typing Logic
@@ -238,6 +253,58 @@ document.addEventListener('DOMContentLoaded', () => {
             const cUser = localStorage.getItem('kingdom_current_user') || 'Aviya';
             const oUser = cUser === 'Aviya' ? 'David' : 'Aviya';
             if (typeof SyncManager !== 'undefined') SyncManager.markMessagesAsRead(oUser);
+        });
+    }
+
+    // Handlers for Custom GIF Upload
+    const gifUploadInput = document.getElementById('gif-upload-input');
+    if (gifUploadInput) {
+        gifUploadInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Simple validation
+            if (file.type !== 'image/gif') {
+                alert("Please select a valid GIF file.");
+                return;
+            }
+
+            // Show temporary loading state/toast
+            const sendBtnIcon = chatSendBtn.innerHTML;
+            chatSendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            chatInput.placeholder = "Uploading GIF...";
+            chatInput.disabled = true;
+
+            try {
+                // Read file
+                const base64 = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = error => reject(error);
+                    reader.readAsDataURL(file);
+                });
+
+                // Upload via SyncManager (which uses Imgur or fallback)
+                // Note: Imgur supports GIF (up to 10MB)
+                let finalUrl = base64;
+                if (typeof SyncManager !== 'undefined' && SyncManager.uploadImage) {
+                    finalUrl = await SyncManager.uploadImage(base64);
+                }
+
+                // Send
+                window.sendChatContent(finalUrl, 'gif');
+                toggleGifPicker(false);
+
+            } catch (error) {
+                console.error("GIF Upload/Send Error:", error);
+                alert("Failed to upload GIF. Please try again or use a smaller file.");
+            } finally {
+                // Restore UI
+                chatSendBtn.innerHTML = sendBtnIcon;
+                chatInput.placeholder = "Write a message...";
+                chatInput.disabled = false;
+                gifUploadInput.value = ''; // Reset input
+            }
         });
     }
 });
